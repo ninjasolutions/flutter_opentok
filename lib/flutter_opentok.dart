@@ -1,30 +1,68 @@
 import 'dart:async';
-
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-class FlutterOpentok {
+class FlutterOpenTok {
   static const MethodChannel _channel = const MethodChannel('flutter_opentok');
 
-  // Core Events
-  /// Reports a warning during SDK runtime.
+  /// Occurs when the SDK cannot reconnect to server 10 seconds after its connection to the server is interrupted.
   ///
-  /// In most cases, the app can ignore the warning reported by the SDK because the SDK can usually fix the issue and resume running.
-  static void Function(int warn) onWarning;
+  /// The SDK triggers this callback when it cannot connect to the server 10 seconds after calling [joinChannel], regardless of whether it is in the channel or not.
+  static VoidCallback onConnectionLost;
 
-  /// Reports an error during SDK runtime.
+  // Core Methods
+  /// Creates an OpenTok instance.
   ///
-  /// In most cases, the SDK cannot fix the issue and resume running. The SDK requires the app to take action or informs the user about the issue.
-  static void Function(int err) onError;
+  /// The OpenTok SDK only supports one instance at a time, therefore the app should create one object only.
+  /// Only users with the same api key, session id and token can join the same channel and call each other.
+  static Future<void> create(OpenTokConfiguration configuration) async {
+    _addMethodCallHandler();
+    return await _channel.invokeMethod('create', {
+      'apiKey': configuration.apiKey,
+      'sessionId': configuration.sessionId,
+      'token': configuration.token,
+    });
+  }
 
-  /// Occurs when a user joins a specified channel.
+  /// Destroys the instance and releases all resources used by the OpenTok SDK.
   ///
-  /// The channel name assignment is based on channelName specified in the [joinChannel] method.
-  /// If the uid is not specified when [joinChannel] is called, the server automatically assigns a uid.
-  static void Function(String channel, int uid, int elapsed)
-      onJoinChannelSuccess;
+  /// This method is useful for apps that occasionally make voice or video calls, to free up resources for other operations when not making calls.
+  /// Once the app calls destroy to destroy the created instance, you cannot use any method or callback in the SDK.
+  static Future<void> destroy() async {
+    _removeMethodCallHandler();
+    return await _channel.invokeMethod('destroy');
+  }
+
+  // CallHandler
+  static void _addMethodCallHandler() {
+    _channel.setMethodCallHandler((MethodCall call) {
+      Map values = call.arguments;
+
+      switch (call.method) {
+        case 'onConnectionLost':
+          if (onConnectionLost != null) {
+            onConnectionLost();
+          }
+          break;
+        default:
+      }
+
+      return;
+    });
+  }
+
+  static void _removeMethodCallHandler() {
+    _channel.setMethodCallHandler(null);
+  }
 
   static Future<String> get platformVersion async {
     final String version = await _channel.invokeMethod('getPlatformVersion');
     return version;
   }
+}
+
+class OpenTokConfiguration {
+  final String token, apiKey, sessionId;
+
+  OpenTokConfiguration(this.token, this.apiKey, this.sessionId);
 }
