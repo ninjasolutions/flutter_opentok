@@ -5,7 +5,10 @@ public class SwiftFlutterOpentokPlugin: NSObject, FlutterPlugin {
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "flutter_opentok", binaryMessenger: registrar.messenger())
         let instance = SwiftFlutterOpentokPlugin()
+        let openTokViewFactory = FlutterOpenTokViewFactory()
+        
         registrar.addMethodCallDelegate(instance, channel: channel)
+        registrar.register(openTokViewFactory as FlutterPlatformViewFactory, withId: "OpenTokRendererView")
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
