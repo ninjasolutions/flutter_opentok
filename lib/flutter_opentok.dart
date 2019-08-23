@@ -4,21 +4,39 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class FlutterOpenTok {
-  static const MethodChannel _channel = const MethodChannel('flutter_opentok');
+  FlutterOpenTok._(this.channel) : assert(channel != null) {
+    channel.setMethodCallHandler(_handleMethodCall);
+  }
 
-  /// Occurs when the SDK cannot reconnect to server 10 seconds after its connection to the server is interrupted.
-  ///
-  /// The SDK triggers this callback when it cannot connect to the server 10 seconds after calling [joinChannel], regardless of whether it is in the channel or not.
-  static VoidCallback onConnectionLost;
+  @visibleForTesting
+  final MethodChannel channel;
+
+  static Future<FlutterOpenTok> init(int id) async {
+    assert(id != null);
+
+    final MethodChannel channel =
+        MethodChannel('plugins.indoor.solutions/opentok_$id');
+
+    return FlutterOpenTok._(channel);
+  }
+
+  // Core Events
+  /// Occurs when the client connects to the OpenTok session.
+  static VoidCallback onSessionConnect;
+
+  /// Occurs when the client disconnects from the OpenTok session.
+  static VoidCallback onSessionDisconnect;
+
+  /// Occurs when the client fails to connect to the OpenTok session.
+  static VoidCallback onSessionConnectError;
 
   // Core Methods
   /// Creates an OpenTok instance.
   ///
   /// The OpenTok SDK only supports one instance at a time, therefore the app should create one object only.
   /// Only users with the same api key, session id and token can join the same channel and call each other.
-  static Future<void> create(OpenTokConfiguration configuration) async {
-    _addMethodCallHandler();
-    return await _channel.invokeMethod('create', {
+  Future<void> create(OpenTokConfiguration configuration) async {
+    return await channel.invokeMethod('create', {
       'apiKey': configuration.apiKey,
       'sessionId': configuration.sessionId,
       'token': configuration.token,
@@ -29,9 +47,52 @@ class FlutterOpenTok {
   ///
   /// This method is useful for apps that occasionally make voice or video calls, to free up resources for other operations when not making calls.
   /// Once the app calls destroy to destroy the created instance, you cannot use any method or callback in the SDK.
-  static Future<void> destroy() async {
+  Future<void> destroy() async {
     _removeMethodCallHandler();
-    return await _channel.invokeMethod('destroy');
+    return await channel.invokeMethod('destroy');
+  }
+
+  // Core Audio
+  /// Enables the audio module.
+  ///
+  /// The audio module is enabled by default.
+  Future<void> enableAudio() async {
+    await channel.invokeMethod('enableAudio');
+  }
+
+  /// Disables the audio module.
+  ///
+  /// The audio module is enabled by default.
+  Future<void> disableAudio() async {
+    await channel.invokeMethod('disableAudio');
+  }
+
+  /// Enables the publisher audio module.
+  ///
+  /// The audio module is enabled by default.
+  Future<void> enablePublisherAudio() async {
+    await channel.invokeMethod('enablePublisherAudio');
+  }
+
+  /// Disables the publisher audio module.
+  ///
+  /// The audio module is enabled by default.
+  Future<void> disablePublisherAudio() async {
+    await channel.invokeMethod('disablePublisherAudio');
+  }
+
+  /// Enables the subscriber audio module.
+  ///
+  /// The audio module is enabled by default.
+  Future<void> enableSubscriberAudio() async {
+    await channel.invokeMethod('enableSubscriberAudio');
+  }
+
+  /// Disables the subscriber audio module.
+  ///
+  /// The audio module is enabled by default.
+  Future<void> disableSubscriberAudio() async {
+    await channel.invokeMethod('disableSubscriberAudio');
   }
 
   /// Creates the video renderer Widget.
@@ -63,29 +124,39 @@ class FlutterOpenTok {
   }
 
   // CallHandler
-  static void _addMethodCallHandler() {
-    _channel.setMethodCallHandler((MethodCall call) {
-      Map values = call.arguments;
+  Future<dynamic> _handleMethodCall(MethodCall call) async {
+    Map values = call.arguments;
 
-      switch (call.method) {
-        case 'onConnectionLost':
-          if (onConnectionLost != null) {
-            onConnectionLost();
-          }
-          break;
-        default:
-      }
+    switch (call.method) {
+      case 'onSessionConnect':
+        if (onSessionConnect != null) {
+          onSessionConnect();
+        }
+        break;
 
-      return;
-    });
+      case 'onSessionDisconnect':
+        if (onSessionDisconnect != null) {
+          onSessionDisconnect();
+        }
+        break;
+
+      case 'onSessionConnectError':
+        if (onSessionConnectError != null) {
+          onSessionConnectError();
+        }
+        break;
+
+      default:
+        throw MissingPluginException();
+    }
   }
 
-  static void _removeMethodCallHandler() {
-    _channel.setMethodCallHandler(null);
+  void _removeMethodCallHandler() {
+    channel.setMethodCallHandler(null);
   }
 
-  static Future<String> get platformVersion async {
-    final String version = await _channel.invokeMethod('getPlatformVersion');
+  Future<String> get platformVersion async {
+    final String version = await channel.invokeMethod('getPlatformVersion');
     return version;
   }
 }

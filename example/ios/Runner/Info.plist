@@ -43,5 +43,9 @@
 	<false/>
 	<key>io.flutter.embedded_views_preview</key>
 	<string>YES</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app uses camera for OpenTok</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app uses microphone for OpenTok</string>
 </dict>
 </plist>
