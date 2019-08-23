@@ -14,7 +14,6 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
     private let registrar: FlutterPluginRegistrar!
     private let frame : CGRect
     private let viewId : Int64
-    private let channelName : String!
     private var channel : FlutterMethodChannel!
     
     var session: OTSession?
@@ -24,7 +23,7 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
     var subscriber: OTSubscriber?
     
     public init(frame: CGRect, viewIdentifier viewId: Int64, arguments args: Any?, registrar: FlutterPluginRegistrar) {
-        channelName = String(format: "plugins.indoor.solutions/opentok_%lld", viewId)
+        let channelName = String(format: "plugins.indoor.solutions/opentok_%lld", viewId)
         
         self.frame = frame
         self.registrar = registrar
@@ -121,6 +120,11 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
         }
     }
     
+    func subscribe(toStream stream: OTStream) {
+        self.subscriber = OTSubscriber(stream: stream, delegate: self)
+        self.session?.subscribe(self.subscriber!, error: nil)
+    }
+    
     func unsubscribe() {
         if self.subscriber != nil {
             self.session?.unsubscribe(self.subscriber!, error: nil)
@@ -185,12 +189,11 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
                     os_log("%@ failed: %@", type: .error, method, error.message!)
                 } else if FlutterMethodNotImplemented.isEqual(result) {
                     os_log("%@ not implemented", type: .error)
-                } else {
-                    os_log("%@", type: .info, result as! NSObject)
                 }
             }
         }
     }
+    
 }
 
 // MARK: - OTSession delegate callbacks

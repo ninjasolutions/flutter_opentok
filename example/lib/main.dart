@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
-
-import 'package:flutter/services.dart';
 import 'package:flutter_opentok/flutter_opentok.dart';
+import 'package:flutter_opentok_example/video_session.dart';
+import 'package:flutter_opentok_example/settings.dart';
 
 void main() => runApp(MyApp());
 
@@ -12,50 +11,192 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String _platformVersion = 'Unknown';
+  static final _sessions = List<VideoSession>();
+  final _infoStrings = <String>[];
+  bool muted = false;
+  FlutterOpenTok controller;
+  OpenTokConfiguration openTokConfiguration;
 
   @override
   void initState() {
     super.initState();
-    initPlatformState();
+    initialize();
   }
 
-  // Platform messages are asynchronous, so we initialize in an async method.
-  Future<void> initPlatformState() async {
-    try {
-      await FlutterOpenTok.create(openTokConfiguration);
-    } on PlatformException {}
+  @override
+  void dispose() {
+    _sessions.clear();
 
-    String platformVersion;
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    try {
-      platformVersion = await FlutterOpenTok.platformVersion;
-    } on PlatformException {
-      platformVersion = 'Failed to get platform version.';
+    super.dispose();
+  }
+
+  void initialize() {
+    if (API_KEY.isEmpty) {
+      setState(() {
+        _infoStrings.add(
+            "APP_ID missing, please provide your API_KEY in settings.dart");
+        _infoStrings.add("OpenTok is not starting");
+      });
+      return;
     }
 
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
-    if (!mounted) return;
+    if (SESSION_ID.isEmpty) {
+      setState(() {
+        _infoStrings.add(
+            "SESSION_ID missing, please provide your SESSION_ID in settings.dart");
+        _infoStrings.add("OpenTok is not starting");
+      });
+      return;
+    }
 
-    setState(() {
-      _platformVersion = platformVersion;
+    if (TOKEN.isEmpty) {
+      setState(() {
+        _infoStrings
+            .add("TOKEN missing, please provide your TOKEN in settings.dart");
+        _infoStrings.add("OpenTok is not starting");
+      });
+      return;
+    }
+
+    openTokConfiguration = OpenTokConfiguration(TOKEN, API_KEY, SESSION_ID);
+
+    _addRenderView(0, (viewId) {
+      print(viewId);
     });
+  }
+
+  // Toolbar layout
+  Widget _toolbar() {
+    return Container(
+        alignment: Alignment.bottomCenter,
+        padding: const EdgeInsets.symmetric(vertical: 48.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            RawMaterialButton(
+              onPressed: () => _onToggleMute(),
+              child: new Icon(
+                muted ? Icons.mic : Icons.mic_off,
+                color: muted ? Colors.white : Colors.blueAccent,
+                size: 20.0,
+              ),
+              shape: new CircleBorder(),
+              elevation: 2.0,
+              fillColor: muted ? Colors.blueAccent : Colors.white,
+              padding: const EdgeInsets.all(12.0),
+            ),
+            RawMaterialButton(
+              onPressed: () => _onSwitchCamera(),
+              child: new Icon(
+                Icons.switch_camera,
+                color: Colors.blueAccent,
+                size: 20.0,
+              ),
+              shape: new CircleBorder(),
+              elevation: 2.0,
+              fillColor: Colors.white,
+              padding: const EdgeInsets.all(12.0),
+            )
+          ],
+        ));
+  }
+
+  /// Helper function to get list of native views
+  List<Widget> _getRenderViews() {
+    return _sessions.map((session) => session.view).toList();
+  }
+
+  /// Video view wrapper
+  Widget _videoView(view) {
+    return Expanded(child: Container(child: view));
+  }
+
+  Widget _viewRows() {
+    List<Widget> views = _getRenderViews();
+    switch (views.length) {
+      case 1:
+        return Container(
+            child: Column(
+          children: <Widget>[_videoView(views[0])],
+        ));
+      default:
+    }
+
+    return Container();
+  }
+
+  /// Info panel to show logs
+  Widget _panel() {
+    return Container(
+        padding: EdgeInsets.symmetric(vertical: 48),
+        alignment: Alignment.bottomCenter,
+        child: FractionallySizedBox(
+          heightFactor: 0.5,
+          child: Container(
+              padding: EdgeInsets.symmetric(vertical: 48),
+              child: ListView.builder(
+                  reverse: true,
+                  itemCount: _infoStrings.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    if (_infoStrings.length == 0) {
+                      return null;
+                    }
+                    return Padding(
+                        padding:
+                            EdgeInsets.symmetric(vertical: 3, horizontal: 10),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Flexible(
+                              child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                      vertical: 2, horizontal: 5),
+                                  decoration: BoxDecoration(
+                                      color: Colors.yellowAccent,
+                                      borderRadius: BorderRadius.circular(5)),
+                                  child: Text(_infoStrings[index],
+                                      style:
+                                          TextStyle(color: Colors.blueGrey))))
+                        ]));
+                  })),
+        ));
+  }
+
+  /// Create a native view and add a new video session object
+  void _addRenderView(int uid, Function(int viewId) finished) {
+    Widget view = FlutterOpenTok.createNativeView(uid, (viewId) async {
+      print(viewId);
+      controller = await FlutterOpenTok.init(viewId);
+
+      print(await controller.getSdkVersion());
+
+      await controller.create(openTokConfiguration);
+    });
+
+    VideoSession session = VideoSession(uid, view);
+    _sessions.add(session);
+  }
+
+  void _onToggleMute() {
+    setState(() {
+      muted = !muted;
+    });
+  }
+
+  void _onSwitchCamera() async {
+    await controller?.switchCamera();
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Plugin example'),
-        ),
-        body: Center(
-            child: FlutterOpenTok.createNativeView(0, (viewId) {
-          print(viewId);
-        })),
-      ),
+          appBar: AppBar(
+            title: const Text('OpenTok SDK'),
+          ),
+          backgroundColor: Colors.black,
+          body: Center(
+              child: Stack(
+            children: <Widget>[_viewRows(), _panel(), _toolbar()],
+          ))),
     );
   }
 }
