@@ -95,6 +95,25 @@ class FlutterOpenTok {
     await channel.invokeMethod('disableSubscriberAudio');
   }
 
+  // Core Video
+  /// Enables the video module.
+  ///
+  /// You can call this method either before or after [joinChannel]. If you call this method before joining a channel, the service starts in the video mode. If you call this method during an audio call, the audio mode switches to the video mode.
+  /// To disable the video, call the [disableVideo] method.
+  /// This method affects the internal engine and can be called after calling the [leaveChannel] method.
+  Future<void> enableVideo() async {
+    await channel.invokeMethod('enableVideo');
+  }
+
+  /// Disables the video module.
+  ///
+  /// You can call this method either before or after [joinChannel]. If you call this method before joining a channel, the service starts in audio mode. If you call this method during a video call, the video mode switches to the audio mode.
+  /// To enable the video mode, call the [enableVideo] method.
+  /// This method affects the internal engine and can be called after calling the [leaveChannel] method.
+  Future<void> disableVideo() async {
+    await channel.invokeMethod('disableVideo');
+  }
+
   /// Creates the video renderer Widget.
   ///
   static Widget createNativeView(int uid, Function(int viewId) created) {
@@ -108,20 +127,29 @@ class FlutterOpenTok {
           }
         },
       );
-    } else if (defaultTargetPlatform == TargetPlatform.android) {
-      return AndroidView(
-        key: new ObjectKey(uid.toString()),
-        viewType: 'OpenTokRendererView',
-        onPlatformViewCreated: (viewId) {
-          if (created != null) {
-            created(viewId);
-          }
-        },
-      );
     }
 
     return Text('$defaultTargetPlatform is not yet supported by this plugin');
   }
+
+  /// Remove the video renderer Widget.
+  Future<void> removeNativeView(int viewId) async {
+    await channel.invokeMethod('removeNativeView', {'viewId': viewId});
+  }
+
+  // Camera Control
+  /// Switches between front and rear cameras.
+  Future<void> switchCamera() async {
+    await channel.invokeMethod('switchCamera');
+  }
+
+  // Miscellaneous Methods
+  /// Gets the SDK version.
+  Future<String> getSdkVersion() async {
+    final String version = await channel.invokeMethod('getSdkVersion');
+    return version;
+  }
+
 
   // CallHandler
   Future<dynamic> _handleMethodCall(MethodCall call) async {

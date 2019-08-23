@@ -65,31 +65,43 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
             } else {
                 result("iOS could not extract flutter arguments in method: (create)")
             }
+            
+            return
         } else if (call.method == "destroy") {
             result("destroy")
         } else if call.method == "enableAudio" {
             unmutePublisherAudio()
             unmuteSubscriberAudio()
-            result(nil)
         } else if call.method == "disableAudio" {
             mutePublisherAudio()
             muteSubscriberAudio()
-            result(nil)
         } else if call.method == "enablePublisherAudio" {
             unmutePublisherAudio()
-            result(nil)
         } else if call.method == "disablePublisherAudio" {
             mutePublisherAudio()
-            result(nil)
         } else if call.method == "enableSubscriberAudio" {
             unmuteSubscriberAudio()
-            result(nil)
         } else if call.method == "disableSubscriberAudio" {
             muteSubscriberAudio()
-            result(nil)
+        } else if call.method == "changePublisherCameraPositionToFront" {
+            changePublisherCameraPositionToFront()
+        } else if call.method == "changePublisherCameraPositionToBack" {
+            changePublisherCameraPositionToBack()
+        } else if call.method == "switchCamera" {
+            if self.publisher?.cameraPosition == AVCaptureDevice.Position.back {
+                changePublisherCameraPositionToFront()
+            } else {
+                changePublisherCameraPositionToBack()
+            }
+        } else if call.method == "getSdkVersion" {
+            result(OPENTOK_LIBRARY_VERSION)
+            return
         } else {
             result(FlutterMethodNotImplemented)
+            return
         }
+        
+        result(nil)
     }
     
     public func view() -> UIView {
@@ -136,6 +148,14 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
     
     func unmuteSubscriberAudio() {
         subscriber?.subscribeToAudio = true;
+    }
+    
+    func changePublisherCameraPositionToFront() {
+        self.publisher?.cameraPosition = .front
+    }
+    
+    func changePublisherCameraPositionToBack() {
+        self.publisher?.cameraPosition = .back
     }
     
     /**
