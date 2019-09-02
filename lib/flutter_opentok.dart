@@ -116,7 +116,15 @@ class FlutterOpenTok {
 
   /// Creates the video renderer Widget.
   ///
-  static Widget createNativeView(int uid, Function(int viewId) created) {
+  static Widget createNativeView(int uid,
+      {int width, int height, Function(int viewId) created}) {
+    Map<String, dynamic> creationParams = {};
+
+    if (width != null && height != null) {
+      creationParams["width"] = width;
+      creationParams["height"] = height;
+    }
+
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       return UiKitView(
         key: new ObjectKey(uid.toString()),
@@ -126,6 +134,8 @@ class FlutterOpenTok {
             created(viewId);
           }
         },
+        creationParams: creationParams,
+        creationParamsCodec: StandardMessageCodec(),
       );
     }
 
@@ -149,7 +159,6 @@ class FlutterOpenTok {
     final String version = await channel.invokeMethod('getSdkVersion');
     return version;
   }
-
 
   // CallHandler
   Future<dynamic> _handleMethodCall(MethodCall call) async {

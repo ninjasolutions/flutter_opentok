@@ -1,7 +1,14 @@
 # flutter_opentok
 
-A new flutter plugin project.
+[![pub package](https://img.shields.io/pub/v/flutter_opentok.svg)](https://pub.dartlang.org/packages/flutter_opentok)
+
+React Native library for OpenTok iOS and Android SDKs
+
+*Note*: This plugin is still under development! [Feedback](https://github.com/ninjasolutions/flutter_opentok/issues) and [Pull Requests](https://github.com/ninjasolutions/flutter_opentok/pulls) are most welcome!
+
+## Usage
+To use this plugin, add `flutter_opentok` as a [dependency in your pubspec.yaml file](https://flutter.io/platform-plugins/).
 
 ## Getting Started
 
-This library used embedding UIViews which is still in release preview, to enable the preview for an iOS app add a boolean field with the key 'io.flutter.embedded_views_preview' and the value set to 'YES' to the application's Info.plist file. A list of open issued with embedding UIViews is available on Github
+Check out the `example` directory for a sample app using OpenTok.

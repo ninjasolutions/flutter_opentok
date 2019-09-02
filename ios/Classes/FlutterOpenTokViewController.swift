@@ -22,6 +22,9 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
     
     var subscriber: OTSubscriber?
     
+    var screenHeight: Int!
+    var screenWidth: Int!
+    
     public init(frame: CGRect, viewIdentifier viewId: Int64, arguments args: Any?, registrar: FlutterPluginRegistrar) {
         let channelName = String(format: "plugins.indoor.solutions/opentok_%lld", viewId)
         
@@ -34,6 +37,18 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
         openTokView = UIView(frame: self.frame)
         openTokView.isOpaque = false
         openTokView.backgroundColor = UIColor.black
+        
+        print("here?")
+        
+        if let arguments = args as? [String: Any],
+            let width = arguments["width"] as? Int,
+            let height = arguments["height"] as? Int {
+            screenHeight = height
+            screenWidth = width
+        } else {
+            screenHeight = 150
+            screenWidth = 150
+        }
         
         super.init()
     }
@@ -64,43 +79,48 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
             } else {
                 result("iOS could not extract flutter arguments in method: (create)")
             }
-            
-            return
         } else if (call.method == "destroy") {
-            result("destroy")
+            destroy()
+            result(nil)
         } else if call.method == "enableAudio" {
             unmutePublisherAudio()
             unmuteSubscriberAudio()
+            result(nil)
         } else if call.method == "disableAudio" {
             mutePublisherAudio()
             muteSubscriberAudio()
+            result(nil)
         } else if call.method == "enablePublisherAudio" {
             unmutePublisherAudio()
+            result(nil)
         } else if call.method == "disablePublisherAudio" {
             mutePublisherAudio()
+            result(nil)
         } else if call.method == "enableSubscriberAudio" {
             unmuteSubscriberAudio()
+            result(nil)
         } else if call.method == "disableSubscriberAudio" {
             muteSubscriberAudio()
+            result(nil)
         } else if call.method == "changePublisherCameraPositionToFront" {
             changePublisherCameraPositionToFront()
+            result(nil)
         } else if call.method == "changePublisherCameraPositionToBack" {
             changePublisherCameraPositionToBack()
+            result(nil)
         } else if call.method == "switchCamera" {
             if self.publisher?.cameraPosition == AVCaptureDevice.Position.back {
                 changePublisherCameraPositionToFront()
             } else {
                 changePublisherCameraPositionToBack()
             }
+            
+            result(nil)
         } else if call.method == "getSdkVersion" {
             result(OPENTOK_LIBRARY_VERSION)
-            return
         } else {
             result(FlutterMethodNotImplemented)
-            return
         }
-        
-        result(nil)
     }
     
     public func view() -> UIView {
@@ -110,7 +130,15 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
     func create(apiKey: String, sessionId: String, token: String) {
         session = OTSession(apiKey: apiKey, sessionId: sessionId, delegate: self)!
         
-        doConnect(token);
+        doConnect(token)
+    }
+    
+    func destroy() {
+        if self.session != nil {
+            unpublish()
+            unsubscribe()
+            disconnectSession()
+        }
     }
     
     func unpublish() {
@@ -135,6 +163,7 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
     func disconnectSession() {
         if self.session != nil {
             self.session?.disconnect(nil)
+            self.session = nil
         }
     }
     
@@ -193,7 +222,6 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
             }
         }
     }
-    
 }
 
 // MARK: - OTSession delegate callbacks
@@ -220,8 +248,9 @@ extension FlutterOpenTokViewController: OTSessionDelegate {
         guard let publisherView = publisher.view else {
             return
         }
-        let screenBounds = UIScreen.main.bounds
-        publisherView.frame = CGRect(x: screenBounds.width - 150 - 100, y: screenBounds.height - 150 - 100, width: 150, height: 150)
+        
+        publisherView.frame = CGRect(x: 0, y: 0, width: self.screenWidth, height: self.screenHeight)
+        
         openTokView.addSubview(publisherView)
     }
     

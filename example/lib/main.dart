@@ -162,8 +162,7 @@ class _MyAppState extends State<MyApp> {
 
   /// Create a native view and add a new video session object
   void _addRenderView(int uid, Function(int viewId) finished) {
-    Widget view = FlutterOpenTok.createNativeView(uid, (viewId) async {
-      print(viewId);
+    Widget view = FlutterOpenTok.createNativeView(uid, width: 300, height: 300, created: (viewId) async {
       controller = await FlutterOpenTok.init(viewId);
 
       print(await controller.getSdkVersion());
@@ -175,7 +174,13 @@ class _MyAppState extends State<MyApp> {
     _sessions.add(session);
   }
 
-  void _onToggleMute() {
+  void _onToggleMute() async {
+    if (muted) {
+      await controller?.disableAudio();
+    } else {
+      await controller?.enableAudio();
+    }
+
     setState(() {
       muted = !muted;
     });
