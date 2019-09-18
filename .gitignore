@@ -11,3 +11,4 @@ lib/generated
 
 /res
 /lib/generated
+example/lib/settings.dart

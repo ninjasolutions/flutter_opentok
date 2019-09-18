@@ -65,6 +65,18 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  Size screenSize(BuildContext context) {
+    return MediaQuery.of(context).size;
+  }
+
+  double screenHeight(BuildContext context, {double dividedBy = 1}) {
+    return screenSize(context).height / dividedBy;
+  }
+
+  double screenWidth(BuildContext context, {double dividedBy = 1}) {
+    return screenSize(context).width / dividedBy;
+  }
+
   // Toolbar layout
   Widget _toolbar() {
     return Container(
@@ -162,7 +174,16 @@ class _MyAppState extends State<MyApp> {
 
   /// Create a native view and add a new video session object
   void _addRenderView(int uid, Function(int viewId) finished) {
-    Widget view = FlutterOpenTok.createNativeView(uid, width: 300, height: 300, created: (viewId) async {
+    FlutterOpenTok.onSessionConnect = () {
+      print("onSessionConnect");
+    };
+
+    FlutterOpenTok.onSessionDisconnect = () {
+      print("onSessionDisconnect");
+    };
+
+    Widget view = FlutterOpenTok.createNativeView(uid, width: 350, height: 350,
+        created: (viewId) async {
       controller = await FlutterOpenTok.init(viewId);
 
       print(await controller.getSdkVersion());

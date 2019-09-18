@@ -7,6 +7,16 @@
 
 import Foundation
 
+public protocol FlutterViewControllerImpl {
+    
+    func setup()
+    
+    func onMethodCall(call: FlutterMethodCall, result: @escaping FlutterResult)
+    
+    func channelInvokeMethod(_ method: String, arguments: Any?) 
+    
+}
+
 class FlutterOpenTokViewFactory : NSObject, FlutterPlatformViewFactory {
     private let registrar: FlutterPluginRegistrar!
     
@@ -19,6 +29,12 @@ class FlutterOpenTokViewFactory : NSObject, FlutterPlatformViewFactory {
     }
     
     func create(withFrame frame: CGRect, viewIdentifier viewId: Int64, arguments args: Any?) -> FlutterPlatformView {
+        // Setup logging.
+        if let arguments = args as? [String: Any],
+            let isLoggingEnabled = arguments["isLoggingEnabled"] as? Bool {
+            SwiftFlutterOpentokPlugin.isLoggingEnabled = isLoggingEnabled
+        }
+        
         let viewController: FlutterOpenTokViewController! = FlutterOpenTokViewController(frame:frame,
                                                                                          viewIdentifier:viewId,
                                                                                          arguments:args,

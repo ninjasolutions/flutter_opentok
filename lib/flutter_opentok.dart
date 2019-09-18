@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class FlutterOpenTok {
+  static bool isLoggingEnabled = true;
+
   FlutterOpenTok._(this.channel) : assert(channel != null) {
     channel.setMethodCallHandler(_handleMethodCall);
   }
@@ -124,6 +126,8 @@ class FlutterOpenTok {
       creationParams["width"] = width;
       creationParams["height"] = height;
     }
+
+    creationParams["isLoggingEnabled"] = FlutterOpenTok.isLoggingEnabled;
 
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       return UiKitView(

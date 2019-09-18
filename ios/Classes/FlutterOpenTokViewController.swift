@@ -10,20 +10,21 @@ import Foundation
 import OpenTok
 
 class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
+
     private var openTokView: UIView!
     private let registrar: FlutterPluginRegistrar!
     private let frame : CGRect
     private let viewId : Int64
     private var channel : FlutterMethodChannel!
     
-    var session: OTSession?
+    var screenHeight: Int?
+    var screenWidth: Int?
     
-    var publisher: OTPublisher?
+    /// Is audio switched to speaker
+    fileprivate(set) var switchedToSpeaker: Bool = true
     
-    var subscriber: OTSubscriber?
-    
-    var screenHeight: Int!
-    var screenWidth: Int!
+    /// Instance providing us VoIP
+    fileprivate var provider: VoIPProvider!
     
     public init(frame: CGRect, viewIdentifier viewId: Int64, arguments args: Any?, registrar: FlutterPluginRegistrar) {
         let channelName = String(format: "plugins.indoor.solutions/opentok_%lld", viewId)
@@ -38,26 +39,109 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
         openTokView.isOpaque = false
         openTokView.backgroundColor = UIColor.black
         
-        print("here?")
-        
         if let arguments = args as? [String: Any],
             let width = arguments["width"] as? Int,
             let height = arguments["height"] as? Int {
             screenHeight = height
             screenWidth = width
-        } else {
-            screenHeight = 150
-            screenWidth = 150
+        }
+        
+        if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+            print("FlutterOpenTokViewController initialized with size: \(screenWidth ?? 100) (w) x \(screenHeight ?? 100) (h)")
         }
         
         super.init()
     }
     
     deinit {
-        print("[DEINIT] FlutterOpenTokViewController")
+        if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+            print("[DEINIT] FlutterOpenTokViewController")
+        }
     }
     
+    /// Where the magic happens.
+    public func view() -> UIView {
+        return openTokView
+    }
+    
+    fileprivate func configureAudioSession() {
+        if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+            print("Configure audio session")
+            print("Switched to speaker = \(switchedToSpeaker)")
+        }
+        
+        do {
+            try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayAndRecord, with: [.mixWithOthers, .allowBluetooth])
+        } catch {
+            if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+               print("Session setCategory error: \(error)")
+            }
+        }
+        
+        do {
+            try AVAudioSession.sharedInstance().setMode(self.switchedToSpeaker ? AVAudioSessionModeVideoChat : AVAudioSessionModeVoiceChat)
+        } catch {
+            if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+                print("Session setMode error: \(error)")
+            }
+        }
+        
+        do {
+            try AVAudioSession.sharedInstance().overrideOutputAudioPort(self.switchedToSpeaker ? .speaker : .none)
+        } catch {
+            if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+                print("Session overrideOutputAudioPort error: \(error)")
+            }
+        }
+        
+        do {
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+                print("Session setActive error: \(error)")
+            }
+        }
+    }
+
+    
+    fileprivate func closeAudioSession() {
+        if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+            print("Close audio session")
+        }
+
+        do {
+            try AVAudioSession.sharedInstance().setActive(false)
+        } catch {
+            if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+                print("Session setActive error: \(error)")
+            }
+        }
+    }
+    
+    /// Convenience getter for current video view based on provider implementation
+    var videoView: UIView? {
+        if let openTokProvider = self.provider as? OpenTokVoIPImpl {
+            return openTokProvider.subscriberView
+        }
+        return nil
+    }
+    
+    /**
+     Create an instance of VoIPProvider. This is what implements VoIP
+     for the application.
+     */
+    private func createProvider() {
+        self.provider = OpenTokVoIPImpl(delegate: self)
+    }
+    
+}
+
+extension FlutterOpenTokViewController: FlutterViewControllerImpl {
     func setup() {
+        // Create VoIP provider
+        self.createProvider()
+        
+        // Listen for method calls from Dart.
         self.channel.setMethodCallHandler({
             [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
             self?.onMethodCall(call: call, result: result)
@@ -74,47 +158,19 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
                 let apiKey = methodArgs["apiKey"] as? String,
                 let sessionId = methodArgs["sessionId"] as? String,
                 let token = methodArgs["token"] as? String {
-                create(apiKey: apiKey, sessionId: sessionId, token: token)
+                self.provider?.connect(apiKey: apiKey, sessionId: sessionId, token: token)
                 result(nil);
             } else {
                 result("iOS could not extract flutter arguments in method: (create)")
             }
-        } else if (call.method == "destroy") {
-            destroy()
+        } else if call.method == "destroy" {
+            self.provider?.disconnect()
             result(nil)
         } else if call.method == "enableAudio" {
-            unmutePublisherAudio()
-            unmuteSubscriberAudio()
+            self.provider?.unmutePublisherAudio()
             result(nil)
         } else if call.method == "disableAudio" {
-            mutePublisherAudio()
-            muteSubscriberAudio()
-            result(nil)
-        } else if call.method == "enablePublisherAudio" {
-            unmutePublisherAudio()
-            result(nil)
-        } else if call.method == "disablePublisherAudio" {
-            mutePublisherAudio()
-            result(nil)
-        } else if call.method == "enableSubscriberAudio" {
-            unmuteSubscriberAudio()
-            result(nil)
-        } else if call.method == "disableSubscriberAudio" {
-            muteSubscriberAudio()
-            result(nil)
-        } else if call.method == "changePublisherCameraPositionToFront" {
-            changePublisherCameraPositionToFront()
-            result(nil)
-        } else if call.method == "changePublisherCameraPositionToBack" {
-            changePublisherCameraPositionToBack()
-            result(nil)
-        } else if call.method == "switchCamera" {
-            if self.publisher?.cameraPosition == AVCaptureDevice.Position.back {
-                changePublisherCameraPositionToFront()
-            } else {
-                changePublisherCameraPositionToBack()
-            }
-            
+            self.provider?.mutePublisherAudio()
             result(nil)
         } else if call.method == "getSdkVersion" {
             result(OPENTOK_LIBRARY_VERSION)
@@ -123,204 +179,96 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
         }
     }
     
-    public func view() -> UIView {
-        return openTokView
-    }
-    
-    func create(apiKey: String, sessionId: String, token: String) {
-        session = OTSession(apiKey: apiKey, sessionId: sessionId, delegate: self)!
-        
-        doConnect(token)
-    }
-    
-    func destroy() {
-        if self.session != nil {
-            unpublish()
-            unsubscribe()
-            disconnectSession()
-        }
-    }
-    
-    func unpublish() {
-        if self.publisher != nil {
-            self.session?.unpublish(self.publisher!, error: nil)
-            self.publisher = nil
-        }
-    }
-    
-    func subscribe(toStream stream: OTStream) {
-        self.subscriber = OTSubscriber(stream: stream, delegate: self)
-        self.session?.subscribe(self.subscriber!, error: nil)
-    }
-    
-    func unsubscribe() {
-        if self.subscriber != nil {
-            self.session?.unsubscribe(self.subscriber!, error: nil)
-            self.subscriber = nil
-        }
-    }
-    
-    func disconnectSession() {
-        if self.session != nil {
-            self.session?.disconnect(nil)
-            self.session = nil
-        }
-    }
-    
-    func mutePublisherAudio() {
-        publisher?.publishAudio = false;
-    }
-    
-    func unmutePublisherAudio() {
-        publisher?.publishAudio = true;
-    }
-    
-    func muteSubscriberAudio() {
-        subscriber?.subscribeToAudio = false;
-    }
-    
-    func unmuteSubscriberAudio() {
-        subscriber?.subscribeToAudio = true;
-    }
-    
-    func changePublisherCameraPositionToFront() {
-        self.publisher?.cameraPosition = .front
-    }
-    
-    func changePublisherCameraPositionToBack() {
-        self.publisher?.cameraPosition = .back
-    }
-    
-    /**
-     * Asynchronously begins the session connect process. Some time later, we will
-     * expect a delegate method to call us back with the results of this action.
-     */
-    private func doConnect(_ token: String) {
-        var error: OTError?
-        defer {
-            process(error: error)
-        }
-        
-        session?.connect(withToken: token, error: &error)
-    }
-    
-    fileprivate func process(error err: OTError?) {
-        if let e = err {
-            print(e.localizedDescription)
-        }
-    }
-    
     func channelInvokeMethod(_ method: String, arguments: Any?) {
         channel.invokeMethod(method, arguments: arguments) {
             (result: Any?) -> Void in
-            if #available(iOS 10.0, *) {
-                if let error = result as? FlutterError {
-                    os_log("%@ failed: %@", type: .error, method, error.message!)
-                } else if FlutterMethodNotImplemented.isEqual(result) {
-                    os_log("%@ not implemented", type: .error)
+            if let error = result as? FlutterError {
+                if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+                    if #available(iOS 10.0, *) {
+                        os_log("%@ failed: %@", type: .error, method, error.message!)
+                    } else {
+                        // Fallback on earlier versions
+                    }
+                }
+            } else if FlutterMethodNotImplemented.isEqual(result) {
+                if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+                    if #available(iOS 10.0, *) {
+                        os_log("%@ not implemented", type: .error)
+                    } else {
+                        // Fallback on earlier versions
+                    }
                 }
             }
         }
     }
+    
 }
 
-// MARK: - OTSession delegate callbacks
-extension FlutterOpenTokViewController: OTSessionDelegate {
-    // The client connected to the OpenTok session.
-    func sessionDidConnect(_ session: OTSession) {
-        channelInvokeMethod("onSessionConnect", arguments: nil)
-
-        let settings = OTPublisherSettings()
-        settings.name = UIDevice.current.name
-        guard let publisher = OTPublisher(delegate: self, settings: settings) else {
-            return
+extension FlutterOpenTokViewController: VoIPProviderDelegate {
+    
+    func willConnect() {
+        self.configureAudioSession()
+    }
+    
+    func didConnect() {
+    }
+    
+    func didDisconnect() {
+        self.closeAudioSession()
+    }
+    
+    func didReceiveVideo() {
+        if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+            print("Receive video")
         }
         
-        publisher.cameraPosition = .front
-        
-        var error: OTError?
-        session.publish(publisher, error: &error)
-        guard error == nil else {
-            print(error!)
-            return
+        if let view = self.videoView {
+            view.frame = CGRect(
+                x: 0,
+                y: 0,
+                width: self.openTokView.frame.width,
+                height: self.openTokView.frame.height
+            )
+            
+            openTokView.addSubview(view)
         }
-        
-        guard let publisherView = publisher.view else {
-            return
-        }
-        
-        publisherView.frame = CGRect(x: 0, y: 0, width: self.screenWidth, height: self.screenHeight)
-        
-        openTokView.addSubview(publisherView)
-    }
-    
-    // The client disconnected from the OpenTok session.
-    func sessionDidDisconnect(_ session: OTSession) {
-        channelInvokeMethod("onSessionDisconnect", arguments: nil)
-    }
-    
-    func session(_ session: OTSession, didFailWithError error: OTError) {
-        print("The client failed to connect to the OpenTok session: \(error).")
-    }
-    
-    func session(_ session: OTSession, streamCreated stream: OTStream) {
-        print("A stream was created in the session.")
-    }
-    
-    // A stream was destroyed in the session.
-    func session(_ session: OTSession, streamDestroyed stream: OTStream) {
-        self.disconnectSession()
-    }
-}
-
-// MARK: - OTPublisher delegate callbacks
-extension FlutterOpenTokViewController: OTPublisherDelegate {
-    
-    public func publisher(_ publisher: OTPublisherKit, streamCreated stream: OTStream) {
-        print(#function, stream)
-    }
-    
-    public func publisher(_ publisher: OTPublisherKit, streamDestroyed stream: OTStream) {
-        print(#function, stream)
-        
-        self.unpublish()
-    }
-    
-    public func publisher(_ publisher: OTPublisherKit, didFailWithError error: OTError) {
-        print(#function, error)
-    }
-    
-    public func publisher(_ publisher: OTPublisher, didChangeCameraPosition position: AVCaptureDevice.Position) {
-        print(#function, position)
     }
     
 }
 
-// MARK: - OTSubscriberDelegate callbacks
-extension FlutterOpenTokViewController: OTSubscriberDelegate {
+
+extension FlutterOpenTokViewController {
     
-    public func subscriberDidConnect(toStream subscriber: OTSubscriberKit) {
-        print(#function)
+    func switchAudioSessionToSpeaker() {
+        if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+            print(#function)
+        }
+        
+        do {
+            try AVAudioSession.sharedInstance().setMode(AVAudioSessionModeVideoChat)
+            try AVAudioSession.sharedInstance().overrideOutputAudioPort(AVAudioSessionPortOverride.speaker)
+            self.switchedToSpeaker = true
+        } catch {
+            if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+                print("Session overrideOutputAudioPort error: \(error)")
+            }
+        }
     }
     
-    public func subscriberDidReconnect(toStream subscriber: OTSubscriberKit) {
-        print(#function)
+    func switchAudioSessionToReceiver() {
+        if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+            print(#function)
+        }
+        
+        do {
+            try AVAudioSession.sharedInstance().setMode(AVAudioSessionModeVoiceChat)
+            try AVAudioSession.sharedInstance().overrideOutputAudioPort(AVAudioSessionPortOverride.none)
+            self.switchedToSpeaker = false
+        } catch {
+            if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+                print("Session overrideOutputAudioPort error: \(error)")
+            }
+        }
     }
     
-    public func subscriberDidDisconnect(fromStream subscriber: OTSubscriberKit) {
-        print(#function)
-        self.unsubscribe()
-    }
-    
-    public func subscriber(_ subscriber: OTSubscriberKit, didFailWithError error: OTError) {
-        print(#function, error)
-    }
-    
-    public func subscriberVideoEnabled(_ subscriber: OTSubscriberKit, reason: OTSubscriberVideoEventReason) {
-        print(#function, reason)
-    }
-    
-    public func subscriberVideoDisabled(_ subscriber: OTSubscriberKit, reason: OTSubscriberVideoEventReason) {
-        print(#function, reason)
-    }
 }
