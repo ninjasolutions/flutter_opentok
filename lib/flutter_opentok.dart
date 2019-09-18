@@ -83,18 +83,18 @@ class FlutterOpenTok {
     await channel.invokeMethod('disablePublisherAudio');
   }
 
-  /// Enables the subscriber audio module.
+  /// Enables the subscriber video module.
   ///
   /// The audio module is enabled by default.
-  Future<void> enableSubscriberAudio() async {
-    await channel.invokeMethod('enableSubscriberAudio');
+  Future<void> enablePublisherVideo() async {
+    await channel.invokeMethod('enablePublisherVideo');
   }
 
-  /// Disables the subscriber audio module.
+  /// Disables the publishers video module.
   ///
   /// The audio module is enabled by default.
-  Future<void> disableSubscriberAudio() async {
-    await channel.invokeMethod('disableSubscriberAudio');
+  Future<void> disablePublisherVideo() async {
+    await channel.invokeMethod('disablePublisherVideo');
   }
 
   // Core Video
@@ -118,13 +118,27 @@ class FlutterOpenTok {
 
   /// Creates the video renderer Widget.
   ///
-  static Widget createNativeView(int uid,
-      {int width, int height, Function(int viewId) created}) {
+  static Widget createNativeView(
+    int uid, {
+    bool enablePublishVideo,
+    String publisherName,
+    int width,
+    int height,
+    Function(int viewId) created,
+  }) {
     Map<String, dynamic> creationParams = {};
 
     if (width != null && height != null) {
       creationParams["width"] = width;
       creationParams["height"] = height;
+    }
+
+    if (enablePublishVideo != null) {
+      creationParams["enablePublishVideo"] = enablePublishVideo;
+    }
+
+    if (publisherName != null) {
+      creationParams["publisherName"] = publisherName;
     }
 
     creationParams["isLoggingEnabled"] = FlutterOpenTok.isLoggingEnabled;

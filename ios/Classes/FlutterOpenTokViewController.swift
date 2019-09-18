@@ -20,6 +20,8 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
     var screenHeight: Int?
     var screenWidth: Int?
     
+    var enablePublisherVideo: Bool?
+    
     /// Is audio switched to speaker
     fileprivate(set) var switchedToSpeaker: Bool = true
     
@@ -159,6 +161,12 @@ extension FlutterOpenTokViewController: FlutterViewControllerImpl {
                 let sessionId = methodArgs["sessionId"] as? String,
                 let token = methodArgs["token"] as? String {
                 self.provider?.connect(apiKey: apiKey, sessionId: sessionId, token: token)
+                
+                // Enable audio if possible.
+                if let enablePublisherVideo = methodArgs["enablePublishVideo"] as? Bool {
+                    self.enablePublisherVideo = enablePublisherVideo
+                }
+                
                 result(nil);
             } else {
                 result("iOS could not extract flutter arguments in method: (create)")
@@ -166,11 +174,23 @@ extension FlutterOpenTokViewController: FlutterViewControllerImpl {
         } else if call.method == "destroy" {
             self.provider?.disconnect()
             result(nil)
-        } else if call.method == "enableAudio" {
+        } else if call.method == "enablePublisherVideo" {
+            self.provider?.enablePublisherVideo()
+            result(nil)
+        } else if call.method == "disablePublisherVideo" {
+            self.provider?.disablePublisherVideo()
+            result(nil)
+        } else if call.method == "enablePublisherAudio" {
             self.provider?.unmutePublisherAudio()
             result(nil)
-        } else if call.method == "disableAudio" {
+        } else if call.method == "disablePublisherAudio" {
             self.provider?.mutePublisherAudio()
+            result(nil)
+        } else if call.method == "switchAudioToSpeaker" {
+            self.switchAudioSessionToSpeaker()
+            result(nil)
+        } else if call.method == "switchAudioToReceiver" {
+            self.switchAudioSessionToReceiver()
             result(nil)
         } else if call.method == "getSdkVersion" {
             result(OPENTOK_LIBRARY_VERSION)
@@ -208,6 +228,15 @@ extension FlutterOpenTokViewController: VoIPProviderDelegate {
     
     func willConnect() {
         self.configureAudioSession()
+        
+        if let enablePublisherVideo = self.enablePublisherVideo {
+            if enablePublisherVideo == true {
+                let videoPermission = AVCaptureDevice.authorizationStatus(for: .video)
+                let videoEnabled = (videoPermission == .authorized)
+                
+                self.provider?.isAudioOnly = !videoEnabled
+            }
+        }
     }
     
     func didConnect() {

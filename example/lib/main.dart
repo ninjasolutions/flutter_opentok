@@ -14,6 +14,7 @@ class _MyAppState extends State<MyApp> {
   static final _sessions = List<VideoSession>();
   final _infoStrings = <String>[];
   bool muted = false;
+  bool publishVideo = false;
   FlutterOpenTok controller;
   OpenTokConfiguration openTokConfiguration;
 
@@ -65,18 +66,6 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  Size screenSize(BuildContext context) {
-    return MediaQuery.of(context).size;
-  }
-
-  double screenHeight(BuildContext context, {double dividedBy = 1}) {
-    return screenSize(context).height / dividedBy;
-  }
-
-  double screenWidth(BuildContext context, {double dividedBy = 1}) {
-    return screenSize(context).width / dividedBy;
-  }
-
   // Toolbar layout
   Widget _toolbar() {
     return Container(
@@ -86,25 +75,37 @@ class _MyAppState extends State<MyApp> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             RawMaterialButton(
+              onPressed: () => _togglePublisherVideo(),
+              child: Icon(
+                publishVideo ? Icons.videocam : Icons.videocam_off,
+                color: publishVideo ? Colors.white : Colors.blueAccent,
+                size: 20.0,
+              ),
+              shape: CircleBorder(),
+              elevation: 2.0,
+              fillColor: muted ? Colors.blueAccent : Colors.white,
+              padding: const EdgeInsets.all(12.0),
+            ),
+            RawMaterialButton(
               onPressed: () => _onToggleMute(),
-              child: new Icon(
+              child: Icon(
                 muted ? Icons.mic : Icons.mic_off,
                 color: muted ? Colors.white : Colors.blueAccent,
                 size: 20.0,
               ),
-              shape: new CircleBorder(),
+              shape: CircleBorder(),
               elevation: 2.0,
               fillColor: muted ? Colors.blueAccent : Colors.white,
               padding: const EdgeInsets.all(12.0),
             ),
             RawMaterialButton(
               onPressed: () => _onSwitchCamera(),
-              child: new Icon(
+              child: Icon(
                 Icons.switch_camera,
                 color: Colors.blueAccent,
                 size: 20.0,
               ),
-              shape: new CircleBorder(),
+              shape: CircleBorder(),
               elevation: 2.0,
               fillColor: Colors.white,
               padding: const EdgeInsets.all(12.0),
@@ -182,8 +183,11 @@ class _MyAppState extends State<MyApp> {
       print("onSessionDisconnect");
     };
 
-    Widget view = FlutterOpenTok.createNativeView(uid, width: 350, height: 350,
-        created: (viewId) async {
+    Widget view = FlutterOpenTok.createNativeView(uid,
+        enablePublishVideo: true,
+        publisherName: "Leemur Rebane",
+        width: 350,
+        height: 350, created: (viewId) async {
       controller = await FlutterOpenTok.init(viewId);
 
       print(await controller.getSdkVersion());
@@ -195,11 +199,23 @@ class _MyAppState extends State<MyApp> {
     _sessions.add(session);
   }
 
+  void _togglePublisherVideo() async {
+    if (publishVideo) {
+      await controller?.disablePublisherVideo();
+    } else {
+      await controller?.enablePublisherVideo();
+    }
+
+    setState(() {
+      publishVideo = !publishVideo;
+    });
+  }
+
   void _onToggleMute() async {
     if (muted) {
-      await controller?.disableAudio();
+      await controller?.disablePublisherAudio();
     } else {
-      await controller?.enableAudio();
+      await controller?.enablePublisherAudio();
     }
 
     setState(() {

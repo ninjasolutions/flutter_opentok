@@ -17,13 +17,20 @@ protocol VoIPProviderDelegate {
 
 public protocol VoIPProvider {
     
-    /// Is VoIP connection established
+    /// Whether VoIP connection has been established.
     var isConnected: Bool { get }
+    
+    // Set whether publisher has audio or not.
+    var isAudioOnly: Bool { get set }
     
     func connect(apiKey: String, sessionId: String, token: String)
     func disconnect()
+    
     func mutePublisherAudio()
     func unmutePublisherAudio()
+    
+    func enablePublisherVideo()
+    func disablePublisherVideo()
 }
 
 
@@ -46,6 +53,12 @@ class OpenTokVoIPImpl: NSObject {
     fileprivate var publisher: OTPublisher!
     fileprivate var subscriber: OTSubscriber!
     fileprivate var videoReceived: Bool = false
+    
+    private var publishVideo: Bool = false {
+        didSet {
+            publisher?.publishVideo = self.publishVideo
+        }
+    }
     
     deinit {
         if SwiftFlutterOpentokPlugin.isLoggingEnabled {
@@ -71,17 +84,57 @@ extension OpenTokVoIPImpl: VoIPProvider {
     }
     
     func mutePublisherAudio() {
+        if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+            print("Enable publisher audio")
+        }
+        
         if self.publisher != nil {
             self.publisher.publishAudio = false
         }
     }
     
     func unmutePublisherAudio() {
+        if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+            print("Unmute publisher audio")
+        }
+        
         if self.publisher != nil {
             self.publisher.publishAudio = true
         }
     }
+    
+    func enablePublisherVideo() {
+        if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+            print("Enable publisher video")
+        }
+        
+        if self.publisher != nil {
+            let videoPermission = AVCaptureDevice.authorizationStatus(for: .video)
+            let videoEnabled = (videoPermission == .authorized)
+            
+            self.isAudioOnly = !videoEnabled
+        }
+    }
 
+    func disablePublisherVideo() {
+        if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+            print("Disable publisher video")
+        }
+        
+        if self.publisher != nil {
+            self.isAudioOnly = true
+        }
+    }
+    
+    var isMuted: Bool {
+        get { return !(self.publisher?.publishAudio ?? false) }
+        set { self.publisher?.publishAudio = !newValue }
+    }
+    
+    var isAudioOnly: Bool {
+        get { return !self.publishVideo }
+        set { self.publishVideo = !newValue }
+    }
 }
 
 private extension OpenTokVoIPImpl {
@@ -117,10 +170,11 @@ private extension OpenTokVoIPImpl {
         let settings = OTPublisherSettings()
         
         settings.name = UIDevice.current.name
-        settings.videoTrack = false
+        settings.videoTrack = true
         settings.audioTrack = true
         
         self.publisher = OTPublisher(delegate: self, settings: settings)
+        self.publisher.cameraPosition = .front
         
         // Publish publisher to session
         var error: OTError?
