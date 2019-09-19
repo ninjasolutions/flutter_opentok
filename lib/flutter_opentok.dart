@@ -1,25 +1,29 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:json_annotation/json_annotation.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-class FlutterOpenTok {
-  static bool isLoggingEnabled = true;
+part 'flutter_opentok.g.dart';
 
-  FlutterOpenTok._(this.channel) : assert(channel != null) {
+class OTFlutter {
+  static bool loggingEnabled = true;
+
+  OTFlutter._(this.channel) : assert(channel != null) {
     channel.setMethodCallHandler(_handleMethodCall);
   }
 
   @visibleForTesting
   final MethodChannel channel;
 
-  static Future<FlutterOpenTok> init(int id) async {
+  static Future<OTFlutter> init(int id) async {
     assert(id != null);
 
     final MethodChannel channel =
         MethodChannel('plugins.indoor.solutions/opentok_$id');
 
-    return FlutterOpenTok._(channel);
+    return OTFlutter._(channel);
   }
 
   // Core Events
@@ -29,8 +33,8 @@ class FlutterOpenTok {
   /// Occurs when the client disconnects from the OpenTok session.
   static VoidCallback onSessionDisconnect;
 
-  /// Occurs when the client fails to connect to the OpenTok session.
-  static VoidCallback onSessionConnectError;
+  /// Occurs when the subscriber video is added to renderer.
+  static VoidCallback onReceiveVideo;
 
   // Core Methods
   /// Creates an OpenTok instance.
@@ -97,6 +101,16 @@ class FlutterOpenTok {
     await channel.invokeMethod('disablePublisherVideo');
   }
 
+  /// Disables the subscribers audio.
+  Future<void> muteSubscriberAudio() async {
+    await channel.invokeMethod('muteSubscriberAudio');
+  }
+
+  /// Enables the subscribers audio.
+  Future<void> unmuteSubscriberAudio() async {
+    await channel.invokeMethod('unmuteSubscriberAudio');
+  }
+
   // Core Video
   /// Enables the video module.
   ///
@@ -120,8 +134,7 @@ class FlutterOpenTok {
   ///
   static Widget createNativeView(
     int uid, {
-    bool enablePublishVideo,
-    String publisherName,
+    OTPublisherKitSettings publisherSettings,
     int width,
     int height,
     Function(int viewId) created,
@@ -133,15 +146,16 @@ class FlutterOpenTok {
       creationParams["height"] = height;
     }
 
-    if (enablePublishVideo != null) {
-      creationParams["enablePublishVideo"] = enablePublishVideo;
+    if (publisherSettings != null) {
+      creationParams["publisherSettings"] =
+          jsonEncode(publisherSettings.toJson());
     }
 
-    if (publisherName != null) {
-      creationParams["publisherName"] = publisherName;
-    }
+    creationParams["loggingEnabled"] = OTFlutter.loggingEnabled;
 
-    creationParams["isLoggingEnabled"] = FlutterOpenTok.isLoggingEnabled;
+    if (OTFlutter.loggingEnabled) {
+      print(creationParams);
+    }
 
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       return UiKitView(
@@ -195,9 +209,9 @@ class FlutterOpenTok {
         }
         break;
 
-      case 'onSessionConnectError':
-        if (onSessionConnectError != null) {
-          onSessionConnectError();
+      case 'onReceiveVideo':
+        if (onReceiveVideo != null) {
+          onReceiveVideo();
         }
         break;
 
@@ -219,80 +233,122 @@ class FlutterOpenTok {
 const int OpenTokVideoBitrateStandard = 0;
 const int OpenTokVideoBitrateCompatible = -1;
 
+@JsonSerializable()
 class OpenTokConfiguration {
-  final String token, apiKey, sessionId;
+  /// The token generated for this connection.
+  final String token;
 
-  OpenTokConfiguration(this.token, this.apiKey, this.sessionId);
+  /// Your OpenTok API key.
+  final String apiKey;
+
+  /// The [session ID](http://tokbox.com/opentok/tutorials/create-session)
+  /// of this instance. This is an immutable value.
+  final String sessionId;
+
+  OpenTokConfiguration({this.token, this.apiKey, this.sessionId});
+
+  factory OpenTokConfiguration.fromJson(Map<String, dynamic> json) =>
+      _$OpenTokConfigurationFromJson(json);
+
+  Map<String, dynamic> toJson() => _$OpenTokConfigurationToJson(this);
 }
 
-/// Properties of the video encoder configuration.
-class VideoEncoderConfiguration {
-  /// The video frame dimension used to specify the video quality in the total number of pixels along a frame's width and height.
-  ///
-  /// The dimension does not specify the orientation mode of the output ratio. For how to set the video orientation, see [VideoOutputOrientationMode].
-  /// Whether 720p can be supported depends on the device. If the device cannot support 720p, the frame rate will be lower than the one listed in the table.
-  Size dimensions = Size(640, 360);
+/// Note that in sessions that use the OpenTok Media Router (sessions with the
+/// [media mode](http://tokbox.com/opentok/tutorials/create-session/#media-mode)
+/// set to routed), lowering the frame rate proportionally reduces the bandwidth
+/// the stream uses. However, in sessions that have the media mode set to
+/// relayed, lowering the frame rate does not reduce the stream's bandwidth.
+enum OTCameraCaptureFrameRate {
+  /// 30 frames per second.
+  OTCameraCaptureFrameRate30FPS,
 
-  /// The frame rate of the video (fps).
-  ///
-  /// We do not recommend setting this to a value greater than 30.
-  int frameRate = 15;
+  /// 15 frames per second.
+  OTCameraCaptureFrameRate15FPS,
 
-  /// The minimum video encoder frame rate (fps).
-  ///
-  /// The default value (-1) means the SDK uses the lowest encoder frame rate.
-  int minFrameRate = -1;
+  /// 7 frames per second.
+  OTCameraCaptureFrameRate7FPS,
 
-  /// The bitrate of the video.
-  ///
-  /// Sets the video bitrate (Kbps). If you set a bitrate beyond the proper range, the SDK automatically adjusts it to a value within the range. You can also choose from the following options:
-  ///  - Standard: (recommended) In this mode, the bitrates differ between the Live-broadcast and Communication profiles:
-  ///   - Communication profile: the video bitrate is the same as the base bitrate.
-  ///   - Live-broadcast profile: the video bitrate is twice the base bitrate.
-  ///  - Compatible: In this mode, the bitrate stays the same regardless of the profile. In the Live-broadcast profile, if you choose this mode, the video frame rate may be lower than the set value.
-  /// It uses different video codecs for different profiles to optimize the user experience. For example, the Communication profile prioritizes the smoothness while the Live-broadcast profile prioritizes the video quality (a higher bitrate).
-  /// Therefore, OpenTok recommends setting this parameter as OpenTokVideoBitrateStandard.
-  int bitrate = OpenTokVideoBitrateStandard;
-
-  /// The minimum encoding bitrate.
-  ///
-  /// The SDK automatically adjusts the encoding bitrate to adapt to network conditions.
-  /// Using a value greater than the default value forces the video encoder to output high-quality images but may cause more packet loss and hence sacrifice the smoothness of the video transmission.
-  /// Unless you have special requirements for image quality, OpenTok does not recommend changing this value.
-  int minBitrate = -1;
-
-  /// The video orientation mode of the video.
-  VideoOutputOrientationMode orientationMode =
-      VideoOutputOrientationMode.Adaptative;
-
-  Map<String, dynamic> _jsonMap() {
-    return {
-      'width': dimensions.width.toInt(),
-      'height': dimensions.height.toInt(),
-      'frameRate': frameRate,
-      'minFrameRate': minFrameRate,
-      'bitrate': bitrate,
-      'minBitrate': minBitrate,
-      'orientationMode': orientationMode.index,
-    };
-  }
+  /// 1 frame per second.
+  OTCameraCaptureFrameRate1FPS,
 }
 
-enum VideoOutputOrientationMode {
-  /// Adaptive mode.
-  ///
-  /// The video encoder adapts to the orientation mode of the video input device. When you use a custom video source, the output video from the encoder inherits the orientation of the original video.
-  /// If the width of the captured video from the SDK is greater than the height, the encoder sends the video in landscape mode. The encoder also sends the rotational information of the video, and the receiver uses the rotational information to rotate the received video.
-  /// If the original video is in portrait mode, the output video from the encoder is also in portrait mode. The encoder also sends the rotational information of the video to the receiver.
-  Adaptative,
+enum OTCameraCaptureResolution {
+  /// The lowest available camera capture resolution supported in the OpenTok iOS SDK (352x288)
+  /// or the closest resolution supported on the device.
+  OTCameraCaptureResolutionLow,
 
-  /// Landscape mode.
+  /// VGA resolution (640x480) or the closest resolution supported on the device.
   ///
-  /// The video encoder always sends the video in landscape mode. The video encoder rotates the original video before sending it and the rotational information is 0. This mode applies to scenarios involving CDN live streaming.
-  FixedLandscape,
+  /// AVCaptureSessionPreset640x480
+  OTCameraCaptureResolutionMedium,
 
-  /// Portrait mode.
+  /// The highest available camera capture resolution supported in the OpenTok iOS SDK
+  /// (1280x720) or the closest resolution supported on the device.
   ///
-  /// The video encoder always sends the video in portrait mode. The video encoder rotates the original video before sending it and the rotational information is 0. This mode applies to scenarios involving CDN live streaming.
-  FixedPortrait,
+  /// AVCaptureSessionPreset1280x720
+  OTCameraCaptureResolutionHigh,
+}
+
+/// OpenTokAudioBitrateDefault default value is 40,000.
+const int OpenTokAudioBitrateDefault = 400000;
+
+/// OTPublisherKitSettings defines settings to be used when initializing a publisher.
+@JsonSerializable()
+class OTPublisherKitSettings {
+  const OTPublisherKitSettings({
+    this.name,
+    this.audioTrack,
+    this.videoTrack,
+    this.audioBitrate,
+    this.cameraResolution,
+    this.cameraFrameRate,
+  });
+
+  /// The name of the publisher video. The <[OTStream name]> property
+  /// for a stream published by this publisher will be set to this value
+  /// (on all clients). The default value is `null`.
+  final String name;
+
+  /// Whether to publish audio (YES, the default) or not (NO).
+  /// If this property is set to NO, the audio subsystem will not be initialized
+  /// for the publisher, and setting the <[OTPublisherKit publishAudio]> property
+  /// will have no effect. If your application does not require the use of audio,
+  /// it is recommended to set this Builder property rather than use the
+  /// <[OTPublisherKit publishAudio]> property, which only temporarily disables
+  /// the audio track.
+  final bool audioTrack;
+
+  /// Whether to publish video (YES, the default) or not (NO).
+  /// If this property is set to NO, the video subsystem will not be initialized
+  /// for the publisher, and setting the <[OTPublisherKit publishVideo]> property
+  /// will have no effect. If your application does not require the use of video,
+  /// it is recommended to set this Builder property rather than use the
+  /// <[OTPublisherKit publishVideo]> property, which only temporarily disables
+  /// the video track.
+  final bool videoTrack;
+
+  /// The desired bitrate for the published audio, in bits per second.
+  /// The supported range of values is 6,000 - 510,000. (Invalid values are
+  /// ignored.) Set this value to enable high-quality audio (or to reduce
+  /// bandwidth usage with lower-quality audio).
+  ///
+  /// The following are recommended settings:
+  ///
+  /// 8,000 - 12,000 for narrowband (NB) speech
+  /// 16,000 - 20,000 for wideband (WB) speech
+  /// 28,000 - 40,000 for full-band (FB) speech
+  /// 48,000 - 64,000 for full-band (FB) mono music
+  /// 64,000 - 128,000 for full-band (FB) stereo music
+  ///
+  /// The default value is [OpenTokAudioBitrateDefault].
+  final int audioBitrate;
+
+  final OTCameraCaptureResolution cameraResolution;
+
+  final OTCameraCaptureFrameRate cameraFrameRate;
+
+  factory OTPublisherKitSettings.fromJson(Map<String, dynamic> json) =>
+      _$OTPublisherKitSettingsFromJson(json);
+
+  Map<String, dynamic> toJson() => _$OTPublisherKitSettingsToJson(this);
 }

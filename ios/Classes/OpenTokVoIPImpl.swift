@@ -16,211 +16,238 @@ protocol VoIPProviderDelegate {
 }
 
 public protocol VoIPProvider {
-    
     /// Whether VoIP connection has been established.
     var isConnected: Bool { get }
-    
+
     // Set whether publisher has audio or not.
     var isAudioOnly: Bool { get set }
-    
+
     func connect(apiKey: String, sessionId: String, token: String)
     func disconnect()
-    
+
     func mutePublisherAudio()
     func unmutePublisherAudio()
     
+    func muteSubscriberAudio()
+    func unmuteSubscriberAudio()
+
     func enablePublisherVideo()
     func disablePublisherVideo()
 }
 
-
 class OpenTokVoIPImpl: NSObject {
-    
     var delegate: VoIPProviderDelegate?
-    
+    var publisherSettings: PublisherSettings?
+
     var subscriberView: UIView? {
-        return self.subscriber?.view
+        return subscriber?.view
     }
-    
-    init(delegate: VoIPProviderDelegate?) {
+
+    init(delegate: VoIPProviderDelegate?, publisherSettings: PublisherSettings?) {
         super.init()
         self.delegate = delegate
+        self.publisherSettings = publisherSettings
     }
-    
+
     // MARK: - Private
-    
+
     fileprivate var session: OTSession!
     fileprivate var publisher: OTPublisher!
     fileprivate var subscriber: OTSubscriber!
     fileprivate var videoReceived: Bool = false
-    
+
     private var publishVideo: Bool = false {
         didSet {
-            publisher?.publishVideo = self.publishVideo
+            publisher?.publishVideo = publishVideo
         }
     }
-    
+
     deinit {
-        if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
             print("[DEINIT] OpenTokVoIPImpl")
         }
     }
 }
 
 extension OpenTokVoIPImpl: VoIPProvider {
-
+    
     var isConnected: Bool {
-        return self.session?.connection != nil
+        return session?.connection != nil
     }
-    
+
     func connect(apiKey: String, sessionId: String, token: String) {
-        self.delegate?.willConnect()
-        
-        self.createSession(key: apiKey, sessionId: sessionId, token: token)
+        delegate?.willConnect()
+
+        createSession(key: apiKey, sessionId: sessionId, token: token)
     }
-    
+
     func disconnect() {
-        self.disconnectSession()
+        disconnectSession()
     }
-    
+
     func mutePublisherAudio() {
-        if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
             print("Enable publisher audio")
         }
-        
-        if self.publisher != nil {
-            self.publisher.publishAudio = false
+
+        if publisher != nil {
+            publisher.publishAudio = false
         }
     }
-    
+
     func unmutePublisherAudio() {
-        if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
             print("Unmute publisher audio")
         }
-        
-        if self.publisher != nil {
-            self.publisher.publishAudio = true
+
+        if publisher != nil {
+            publisher.publishAudio = true
         }
     }
     
-    func enablePublisherVideo() {
-        if SwiftFlutterOpentokPlugin.isLoggingEnabled {
-            print("Enable publisher video")
+    func muteSubscriberAudio() {
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
+            print("Mute subscriber audio")
         }
         
-        if self.publisher != nil {
+        if subscriber != nil {
+            subscriber.subscribeToAudio = false
+        }
+    }
+    
+    func unmuteSubscriberAudio() {
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
+            print("Unmute subscriber audio")
+        }
+        
+        if subscriber != nil {
+            subscriber.subscribeToAudio = true
+        }
+    }
+
+    func enablePublisherVideo() {
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
+            print("Enable publisher video")
+        }
+
+        if publisher != nil {
             let videoPermission = AVCaptureDevice.authorizationStatus(for: .video)
             let videoEnabled = (videoPermission == .authorized)
             
-            self.isAudioOnly = !videoEnabled
+            publisher.publishVideo = videoEnabled
         }
     }
 
     func disablePublisherVideo() {
-        if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
             print("Disable publisher video")
         }
-        
-        if self.publisher != nil {
-            self.isAudioOnly = true
+
+        if publisher != nil {
+            publisher.publishVideo = false
         }
     }
-    
+
     var isMuted: Bool {
-        get { return !(self.publisher?.publishAudio ?? false) }
-        set { self.publisher?.publishAudio = !newValue }
+        get { return !(publisher?.publishAudio ?? false) }
+        set { publisher?.publishAudio = !newValue }
     }
-    
+
     var isAudioOnly: Bool {
-        get { return !self.publishVideo }
-        set { self.publishVideo = !newValue }
+        get { return !publishVideo }
+        set { publishVideo = !newValue }
     }
 }
 
 private extension OpenTokVoIPImpl {
-    
     func createSession(key: String, sessionId: String, token: String) {
-        if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
             print("Create OTSession")
             print("API key: \(key)")
             print("Session ID: \(sessionId)")
             print("Token: \(token)")
         }
-        
+
         if key == "" || sessionId == "" || token == "" {
             return
         }
-        
-        self.session = OTSession(apiKey: key, sessionId: sessionId, delegate: self)
 
-        self.doConnect(token)
+        session = OTSession(apiKey: key, sessionId: sessionId, delegate: self)
+
+        doConnect(token)
     }
-    
+
     func disconnectSession() {
-        if self.session != nil {
-            self.session.disconnect(nil)
+        if session != nil {
+            session.disconnect(nil)
         }
     }
-    
+
     func publish() {
-        if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
             print("Publish")
         }
-        
+
         let settings = OTPublisherSettings()
+
+        settings.name = self.publisherSettings?.name ?? UIDevice.current.name
+        settings.videoTrack = self.publisherSettings?.videoTrack ?? true
+        settings.audioTrack = self.publisherSettings?.audioTrack ?? true
+        settings.cameraResolution = .high
+        settings.cameraFrameRate = .rate30FPS
         
-        settings.name = UIDevice.current.name
-        settings.videoTrack = true
-        settings.audioTrack = true
-        
-        self.publisher = OTPublisher(delegate: self, settings: settings)
-        self.publisher.cameraPosition = .front
-        
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
+            print(settings)
+        }
+
+        publisher = OTPublisher(delegate: self, settings: settings)
+        publisher.cameraPosition = .front
+
         // Publish publisher to session
         var error: OTError?
-        
-        self.session.publish(self.publisher, error: &error)
-        
+
+        session.publish(publisher, error: &error)
+
         guard error == nil else {
-            if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+            if SwiftFlutterOpentokPlugin.loggingEnabled {
                 print(error.debugDescription)
             }
             return
         }
     }
-    
+
     func unpublish() {
-        if self.publisher != nil {
-            if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+        if publisher != nil {
+            if SwiftFlutterOpentokPlugin.loggingEnabled {
                 print("Unpublish")
             }
-            
-            self.session.unpublish(self.publisher, error: nil)
-            self.publisher = nil
+
+            session.unpublish(publisher, error: nil)
+            publisher = nil
         }
     }
-    
+
     func subscribe(toStream stream: OTStream) {
-        if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
             print("Subscribe to stream \(stream.name ?? "<No stream name>")")
         }
-        
-        self.subscriber = OTSubscriber(stream: stream, delegate: self)
-        
-        self.session.subscribe(self.subscriber, error: nil)
+
+        subscriber = OTSubscriber(stream: stream, delegate: self)
+
+        session.subscribe(subscriber, error: nil)
     }
-    
+
     func unsubscribe() {
-        if self.subscriber != nil {
-            if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+        if subscriber != nil {
+            if SwiftFlutterOpentokPlugin.loggingEnabled {
                 print("Unsubscribe")
             }
-            
-            self.session.unsubscribe(self.subscriber, error: nil)
-            self.subscriber = nil
+
+            session.unsubscribe(subscriber, error: nil)
+            subscriber = nil
         }
     }
-    
+
     /**
      * Asynchronously begins the session connect process. Some time later, we will
      * expect a delegate method to call us back with the results of this action.
@@ -230,139 +257,129 @@ private extension OpenTokVoIPImpl {
         defer {
             process(error: error)
         }
-        
+
         session?.connect(withToken: token, error: &error)
     }
-    
+
     private func process(error err: OTError?) {
         if let e = err {
-            if SwiftFlutterOpentokPlugin.isLoggingEnabled {
+            if SwiftFlutterOpentokPlugin.loggingEnabled {
                 print(e.localizedDescription)
             }
         }
     }
-    
 }
 
 extension OpenTokVoIPImpl: OTSessionDelegate {
-    
-    public func sessionDidConnect(_ session: OTSession) {
+    public func sessionDidConnect(_: OTSession) {
         print(#function)
-        self.publish()
-        self.delegate?.didConnect()
+        publish()
+        delegate?.didConnect()
     }
-    
-    public func sessionDidReconnect(_ session: OTSession) {
+
+    public func sessionDidReconnect(_: OTSession) {
         print(#function)
     }
-    
-    public func sessionDidDisconnect(_ session: OTSession) {
+
+    public func sessionDidDisconnect(_: OTSession) {
         print(#function)
-        
-        self.unsubscribe()
-        self.unpublish()
-        
-        if self.session != nil {
-            self.session = nil
+
+        unsubscribe()
+        unpublish()
+
+        if session != nil {
+            session = nil
         }
-        
-        self.videoReceived = false
-        
-        self.delegate?.didDisconnect()
+
+        videoReceived = false
+
+        delegate?.didDisconnect()
     }
-    
-    public func sessionDidBeginReconnecting(_ session: OTSession) {
+
+    public func sessionDidBeginReconnecting(_: OTSession) {
         print(#function)
     }
-    
-    public func session(_ session: OTSession, didFailWithError error: OTError) {
+
+    public func session(_: OTSession, didFailWithError error: OTError) {
         print(#function, error)
     }
-    
-    public func session(_ session: OTSession, streamCreated stream: OTStream) {
+
+    public func session(_: OTSession, streamCreated stream: OTStream) {
         print(#function, stream)
-        
-        self.subscribe(toStream: stream)
+
+        subscribe(toStream: stream)
     }
-    
-    public func session(_ session: OTSession, streamDestroyed stream: OTStream) {
+
+    public func session(_: OTSession, streamDestroyed stream: OTStream) {
         print(#function, stream)
     }
-    
-    public func session(_ session: OTSession, connectionCreated connection: OTConnection) {
+
+    public func session(_: OTSession, connectionCreated connection: OTConnection) {
         print(#function, connection)
     }
-    
-    public func session(_ session: OTSession, connectionDestroyed connection: OTConnection) {
+
+    public func session(_: OTSession, connectionDestroyed connection: OTConnection) {
         print(#function, connection)
-        
-        self.disconnectSession()
+
+        disconnectSession()
     }
-    
-    public func session(_ session: OTSession, receivedSignalType type: String?, from connection: OTConnection?, with string: String?) {
+
+    public func session(_: OTSession, receivedSignalType type: String?, from connection: OTConnection?, with string: String?) {
         print(#function, type ?? "<No signal type>", connection ?? "<Nil connection>", string ?? "<No string>")
     }
-    
 }
-
 
 extension OpenTokVoIPImpl: OTPublisherDelegate {
-    
-    public func publisher(_ publisher: OTPublisherKit, streamCreated stream: OTStream) {
+    public func publisher(_: OTPublisherKit, streamCreated stream: OTStream) {
         print(#function, stream)
     }
-    
-    public func publisher(_ publisher: OTPublisherKit, streamDestroyed stream: OTStream) {
+
+    public func publisher(_: OTPublisherKit, streamDestroyed stream: OTStream) {
         print(#function, stream)
-        
-        self.unpublish()
+
+        unpublish()
     }
-    
-    public func publisher(_ publisher: OTPublisherKit, didFailWithError error: OTError) {
+
+    public func publisher(_: OTPublisherKit, didFailWithError error: OTError) {
         print(#function, error)
     }
-    
-    public func publisher(_ publisher: OTPublisher, didChangeCameraPosition position: AVCaptureDevice.Position) {
+
+    public func publisher(_: OTPublisher, didChangeCameraPosition position: AVCaptureDevice.Position) {
         print(#function, position)
     }
-    
 }
-
 
 extension OpenTokVoIPImpl: OTSubscriberDelegate {
-    
-    public func subscriberDidConnect(toStream subscriber: OTSubscriberKit) {
+    public func subscriberDidConnect(toStream _: OTSubscriberKit) {
         print(#function)
     }
-    
-    public func subscriberDidReconnect(toStream subscriber: OTSubscriberKit) {
+
+    public func subscriberDidReconnect(toStream _: OTSubscriberKit) {
         print(#function)
     }
-    
-    public func subscriberDidDisconnect(fromStream subscriber: OTSubscriberKit) {
+
+    public func subscriberDidDisconnect(fromStream _: OTSubscriberKit) {
         print(#function)
-        
-        self.unsubscribe()
+
+        unsubscribe()
     }
-    
-    public func subscriber(_ subscriber: OTSubscriberKit, didFailWithError error: OTError) {
+
+    public func subscriber(_: OTSubscriberKit, didFailWithError error: OTError) {
         print(#function, error)
     }
-    
-    public func subscriberVideoEnabled(_ subscriber: OTSubscriberKit, reason: OTSubscriberVideoEventReason) {
+
+    public func subscriberVideoEnabled(_: OTSubscriberKit, reason: OTSubscriberVideoEventReason) {
         print(#function, reason)
     }
-    
-    public func subscriberVideoDisabled(_ subscriber: OTSubscriberKit, reason: OTSubscriberVideoEventReason) {
+
+    public func subscriberVideoDisabled(_: OTSubscriberKit, reason: OTSubscriberVideoEventReason) {
         print(#function, reason)
     }
-    
-    public func subscriberVideoDataReceived(_ subscriber: OTSubscriber) {
-        if self.videoReceived == false {
-            self.videoReceived = true
-            self.delegate?.didReceiveVideo()
+
+    public func subscriberVideoDataReceived(_: OTSubscriber) {
+        if videoReceived == false {
+            videoReceived = true
+            delegate?.didReceiveVideo()
         }
     }
-    
 }
-

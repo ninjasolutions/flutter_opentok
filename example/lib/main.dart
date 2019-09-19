@@ -15,7 +15,7 @@ class _MyAppState extends State<MyApp> {
   final _infoStrings = <String>[];
   bool muted = false;
   bool publishVideo = false;
-  FlutterOpenTok controller;
+  OTFlutter controller;
   OpenTokConfiguration openTokConfiguration;
 
   @override
@@ -59,7 +59,8 @@ class _MyAppState extends State<MyApp> {
       return;
     }
 
-    openTokConfiguration = OpenTokConfiguration(TOKEN, API_KEY, SESSION_ID);
+    openTokConfiguration = OpenTokConfiguration(
+        token: TOKEN, apiKey: API_KEY, sessionId: SESSION_ID);
 
     _addRenderView(0, (viewId) {
       print(viewId);
@@ -175,20 +176,22 @@ class _MyAppState extends State<MyApp> {
 
   /// Create a native view and add a new video session object
   void _addRenderView(int uid, Function(int viewId) finished) {
-    FlutterOpenTok.onSessionConnect = () {
+    OTFlutter.onSessionConnect = () {
       print("onSessionConnect");
     };
 
-    FlutterOpenTok.onSessionDisconnect = () {
+    OTFlutter.onSessionDisconnect = () {
       print("onSessionDisconnect");
     };
 
-    Widget view = FlutterOpenTok.createNativeView(uid,
-        enablePublishVideo: true,
-        publisherName: "Leemur Rebane",
-        width: 350,
-        height: 350, created: (viewId) async {
-      controller = await FlutterOpenTok.init(viewId);
+    var publisherSettings = OTPublisherKitSettings(
+      name: "John Doe",
+      audioTrack: true,
+      videoTrack: publishVideo,
+    );
+    Widget view = OTFlutter.createNativeView(uid,
+        publisherSettings: publisherSettings, created: (viewId) async {
+      controller = await OTFlutter.init(viewId);
 
       print(await controller.getSdkVersion());
 

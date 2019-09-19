@@ -12,3 +12,6 @@ To use this plugin, add `flutter_opentok` as a [dependency in your pubspec.yaml 
 ## Getting Started
 
 Check out the `example` directory for a sample app using OpenTok.
+
+## Development  
+Generate the models and the factories: `flutter packages pub run build_runner build --delete-conflicting-outputs`
