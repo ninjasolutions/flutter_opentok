@@ -2,8 +2,8 @@ PODS:
   - Flutter (1.0.0)
   - flutter_opentok (0.0.1):
     - Flutter
-    - OpenTok (= 2.16.2)
-  - OpenTok (2.16.2)
+    - OpenTok (= 2.16.3)
+  - OpenTok (2.16.3)
 
 DEPENDENCIES:
   - Flutter (from `.symlinks/flutter/ios`)
@@ -21,8 +21,8 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: 0e3d915762c693b495b44d77113d4970485de6ec
-  flutter_opentok: 51d202bfeba25990e2fe5e1f82a03d0d2cafcc88
-  OpenTok: fa4c7b382e3eb07ebde7631a032e990c063ba1f5
+  flutter_opentok: c850cd946550870d9295708766ce225185f11d8b
+  OpenTok: e17e1333108837cf0669be5de8f3155d1eb7ac12
 
 PODFILE CHECKSUM: f599dbb7e9a24b42ebf7c20d0ea31a6db6fb973c
 
