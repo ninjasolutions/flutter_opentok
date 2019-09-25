@@ -238,9 +238,19 @@ extension FlutterOpenTokViewController: FlutterViewControllerImpl {
 }
 
 extension FlutterOpenTokViewController: VoIPProviderDelegate {
+    func didCreateStream() {
+        channelInvokeMethod("onCreateStream", arguments: nil)
+    }
+    
+    func didCreatePublisherStream() {
+        channelInvokeMethod("onCreatePublisherStream", arguments: nil)
+    }
+    
     func willConnect() {
         configureAudioSession()
-
+        
+        channelInvokeMethod("onWillConnect", arguments: nil)
+        
         if let enablePublisherVideo = self.enablePublisherVideo {
             if enablePublisherVideo == true {
                 let videoPermission = AVCaptureDevice.authorizationStatus(for: .video)
@@ -265,6 +275,8 @@ extension FlutterOpenTokViewController: VoIPProviderDelegate {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
             print("Receive video")
         }
+        
+        channelInvokeMethod("onReceiveVideo", arguments: nil)
 
         if let view = self.videoView {
             view.frame = CGRect(

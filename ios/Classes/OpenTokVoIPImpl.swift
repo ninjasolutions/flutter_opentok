@@ -13,6 +13,8 @@ protocol VoIPProviderDelegate {
     func didConnect()
     func didDisconnect()
     func didReceiveVideo()
+    func didCreateStream()
+    func didCreatePublisherStream()
 }
 
 public protocol VoIPProvider {
@@ -308,6 +310,8 @@ extension OpenTokVoIPImpl: OTSessionDelegate {
         print(#function, stream)
 
         subscribe(toStream: stream)
+        
+        delegate?.didCreateStream()
     }
 
     public func session(_: OTSession, streamDestroyed stream: OTStream) {
@@ -332,6 +336,8 @@ extension OpenTokVoIPImpl: OTSessionDelegate {
 extension OpenTokVoIPImpl: OTPublisherDelegate {
     public func publisher(_: OTPublisherKit, streamCreated stream: OTStream) {
         print(#function, stream)
+        
+        delegate?.didCreatePublisherStream()
     }
 
     public func publisher(_: OTPublisherKit, streamDestroyed stream: OTStream) {

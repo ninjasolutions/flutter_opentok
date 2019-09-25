@@ -27,6 +27,9 @@ class OTFlutter {
   }
 
   // Core Events
+  /// Triggered before creating OpenTok session.
+  static VoidCallback onWillConnect;
+
   /// Occurs when the client connects to the OpenTok session.
   static VoidCallback onSessionConnect;
 
@@ -35,6 +38,12 @@ class OTFlutter {
 
   /// Occurs when the subscriber video is added to renderer.
   static VoidCallback onReceiveVideo;
+
+  /// Occurs when subscriber stream has been created.
+  static VoidCallback onCreateStream;
+
+  /// Occurs when publisher stream has been created.
+  static VoidCallback onCreatePublisherStream;
 
   // Core Methods
   /// Creates an OpenTok instance.
@@ -212,6 +221,24 @@ class OTFlutter {
       case 'onReceiveVideo':
         if (onReceiveVideo != null) {
           onReceiveVideo();
+        }
+        break;
+
+      case 'onCreateStream':
+        if (onCreateStream != null) {
+          onCreateStream();
+        }
+        break;
+
+      case 'onCreatePublisherStream':
+        if (onCreatePublisherStream != null) {
+          onCreatePublisherStream();
+        }
+        break;
+
+      case 'onWillConnect':
+        if (onWillConnect != null) {
+          onWillConnect();
         }
         break;
 
