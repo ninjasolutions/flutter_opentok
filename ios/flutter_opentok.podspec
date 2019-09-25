@@ -21,9 +21,10 @@ A new flutter plugin project.
   s.public_header_files = 'Classes/**/*.h'
   s.dependency 'Flutter'
   s.dependency 'OpenTok', openTokLibraryVersion
+  s.dependency 'SnapKit', '~> 5.0.0'
   s.static_framework = true
 
-  s.ios.deployment_target = '9.0'
+  s.ios.deployment_target = '10.0'
 
   s.prepare_command = <<-CMD
       echo // Generated file, do not edit > Classes/UserAgent.h

@@ -7,6 +7,7 @@
 
 import Foundation
 import OpenTok
+import SnapKit
 import os
 
 class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
@@ -279,16 +280,17 @@ extension FlutterOpenTokViewController: VoIPProviderDelegate {
         channelInvokeMethod("onReceiveVideo", arguments: nil)
 
         if let view = self.videoView {
-            view.frame = CGRect(
-                x: 0,
-                y: 0,
-                width: openTokView.frame.width,
-                height: openTokView.frame.height
-            )
-            
             channelInvokeMethod("onReceiveVideo", arguments: nil)
 
             openTokView.addSubview(view)
+            
+            view.backgroundColor = .black
+            view.snp.makeConstraints { (make) -> Void in
+                make.top.equalTo(openTokView)
+                make.left.equalTo(openTokView)
+                make.bottom.equalTo(openTokView)
+                make.right.equalTo(openTokView)
+            }
         }
     }
 }
