@@ -82,18 +82,18 @@ class OTFlutter {
     await channel.invokeMethod('disableAudio');
   }
 
-  /// Enables the publisher audio module.
+  /// Unmute the publisher audio module.
   ///
   /// The audio module is enabled by default.
-  Future<void> enablePublisherAudio() async {
-    await channel.invokeMethod('enablePublisherAudio');
+  Future<void> unmutePublisherAudio() async {
+    await channel.invokeMethod('unmutePublisherAudio');
   }
 
-  /// Disables the publisher audio module.
+  /// Mute the publisher audio module.
   ///
   /// The audio module is enabled by default.
-  Future<void> disablePublisherAudio() async {
-    await channel.invokeMethod('disablePublisherAudio');
+  Future<void> mutePublisherAudio() async {
+    await channel.invokeMethod('mutePublisherAudio');
   }
 
   /// Enables the subscriber video module.

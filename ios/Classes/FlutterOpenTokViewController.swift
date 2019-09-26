@@ -189,10 +189,10 @@ extension FlutterOpenTokViewController: FlutterViewControllerImpl {
         } else if call.method == "disablePublisherVideo" {
             provider?.disablePublisherVideo()
             result(nil)
-        } else if call.method == "enablePublisherAudio" {
+        } else if call.method == "unmutePublisherAudio" {
             provider?.unmutePublisherAudio()
             result(nil)
-        } else if call.method == "disablePublisherAudio" {
+        } else if call.method == "mutePublisherAudio" {
             provider?.mutePublisherAudio()
             result(nil)
         } else if call.method == "muteSubscriberAudio" {

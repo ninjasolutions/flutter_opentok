@@ -14,7 +14,7 @@ class _MyAppState extends State<MyApp> {
   static final _sessions = List<VideoSession>();
   final _infoStrings = <String>[];
   bool muted = false;
-  bool publishVideo = false;
+  bool publishVideo = true;
   OTFlutter controller;
   OpenTokConfiguration openTokConfiguration;
 
@@ -185,15 +185,13 @@ class _MyAppState extends State<MyApp> {
     };
 
     var publisherSettings = OTPublisherKitSettings(
-      name: "John Doe",
+      name: "Mr. John Doe",
       audioTrack: true,
       videoTrack: publishVideo,
     );
     Widget view = OTFlutter.createNativeView(uid,
         publisherSettings: publisherSettings, created: (viewId) async {
       controller = await OTFlutter.init(viewId);
-
-      print(await controller.getSdkVersion());
 
       await controller.create(openTokConfiguration);
     });
@@ -216,9 +214,9 @@ class _MyAppState extends State<MyApp> {
 
   void _onToggleMute() async {
     if (muted) {
-      await controller?.disablePublisherAudio();
+      await controller?.unmutePublisherAudio();
     } else {
-      await controller?.enablePublisherAudio();
+      await controller?.mutePublisherAudio();
     }
 
     setState(() {
