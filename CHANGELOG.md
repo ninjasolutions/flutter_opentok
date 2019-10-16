@@ -1,3 +1,7 @@
+## 0.0.3
+
+- Upgrade to Swift 4.2.
+
 ## 0.0.2
 
 - Fixes, fixes, fixes.
