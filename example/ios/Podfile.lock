@@ -1,6 +1,6 @@
 PODS:
   - Flutter (1.0.0)
-  - flutter_opentok (0.0.1):
+  - flutter_opentok (0.0.3):
     - Flutter
     - OpenTok (= 2.16.3)
     - SnapKit (~> 5.0.0)
@@ -24,7 +24,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: 0e3d915762c693b495b44d77113d4970485de6ec
-  flutter_opentok: 928611411bd174f5b84280ec06f4b71b1815cad4
+  flutter_opentok: d9770ea5ee9e96294e33e293d4e6163fb9043f65
   OpenTok: e17e1333108837cf0669be5de8f3155d1eb7ac12
   SnapKit: 97b92857e3df3a0c71833cce143274bf6ef8e5eb
 

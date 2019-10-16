@@ -8,15 +8,16 @@ openTokLibraryVersion = '2.16.3'
 
 Pod::Spec.new do |s|
   s.name             = 'flutter_opentok'
-  s.version          = '0.0.1'
-  s.summary          = 'A new flutter plugin project.'
+  s.version          = '0.0.3'
+  s.summary          = 'Flutter library for OpenTok iOS and Android SDKs.'
   s.description      = <<-DESC
-A new flutter plugin project.
+  Flutter library for OpenTok iOS and Android SDKs.
                        DESC
-  s.homepage         = 'http://example.com'
+  s.homepage         = 'https://github.com/ninjasolutions/flutter_opentok'
   s.license          = { :file => '../LICENSE' }
-  s.author           = { 'Your Company' => 'email@example.com' }
+  s.author           = { 'Your Company' => 'genert.org@ninja.solutions' }
   s.source           = { :path => '.' }
+  s.swift_version = '4.2'
   s.source_files = 'Classes/**/*'
   s.public_header_files = 'Classes/**/*.h'
   s.dependency 'Flutter'

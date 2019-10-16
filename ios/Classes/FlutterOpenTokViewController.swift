@@ -90,7 +90,7 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
         }
 
         do {
-            try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayAndRecord, with: [.mixWithOthers, .allowBluetooth])
+            try AVAudioSession.sharedInstance().setCategory(.playAndRecord, options: [.mixWithOthers, .allowBluetooth])
         } catch {
             if SwiftFlutterOpentokPlugin.loggingEnabled {
                 print("Session setCategory error: \(error)")
@@ -98,7 +98,7 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
         }
 
         do {
-            try AVAudioSession.sharedInstance().setMode(switchedToSpeaker ? AVAudioSessionModeVideoChat : AVAudioSessionModeVoiceChat)
+            try AVAudioSession.sharedInstance().setMode(switchedToSpeaker ? AVAudioSession.Mode.videoChat : AVAudioSession.Mode.voiceChat)
         } catch {
             if SwiftFlutterOpentokPlugin.loggingEnabled {
                 print("Session setMode error: \(error)")
@@ -302,8 +302,8 @@ extension FlutterOpenTokViewController {
         }
 
         do {
-            try AVAudioSession.sharedInstance().setMode(AVAudioSessionModeVideoChat)
-            try AVAudioSession.sharedInstance().overrideOutputAudioPort(AVAudioSessionPortOverride.speaker)
+            try AVAudioSession.sharedInstance().setMode(AVAudioSession.Mode.videoChat)
+            try AVAudioSession.sharedInstance().overrideOutputAudioPort(AVAudioSession.PortOverride.speaker)
             switchedToSpeaker = true
         } catch {
             if SwiftFlutterOpentokPlugin.loggingEnabled {
@@ -318,8 +318,8 @@ extension FlutterOpenTokViewController {
         }
 
         do {
-            try AVAudioSession.sharedInstance().setMode(AVAudioSessionModeVoiceChat)
-            try AVAudioSession.sharedInstance().overrideOutputAudioPort(AVAudioSessionPortOverride.none)
+            try AVAudioSession.sharedInstance().setMode(AVAudioSession.Mode.voiceChat)
+            try AVAudioSession.sharedInstance().overrideOutputAudioPort(AVAudioSession.PortOverride.none)
             switchedToSpeaker = false
         } catch {
             if SwiftFlutterOpentokPlugin.loggingEnabled {

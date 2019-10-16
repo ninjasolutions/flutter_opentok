@@ -2,7 +2,7 @@
 
 [![pub package](https://img.shields.io/pub/v/flutter_opentok.svg)](https://pub.dartlang.org/packages/flutter_opentok)
 
-React Native library for OpenTok iOS and Android SDKs
+Flutter library for OpenTok iOS and Android SDKs.
 
 *Note*: This plugin is still under development! [Feedback](https://github.com/ninjasolutions/flutter_opentok/issues) and [Pull Requests](https://github.com/ninjasolutions/flutter_opentok/pulls) are most welcome!
 
