@@ -1,3 +1,7 @@
+## 0.0.4
+
+- Add debugging support.
+
 ## 0.0.3
 
 - Upgrade to Swift 4.2.
