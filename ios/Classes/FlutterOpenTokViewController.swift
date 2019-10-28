@@ -7,8 +7,8 @@
 
 import Foundation
 import OpenTok
-import SnapKit
 import os
+import SnapKit
 
 class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
     private var openTokView: UIView!
@@ -57,7 +57,7 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
             do {
                 let jsonDecoder = JSONDecoder()
 
-                self.publisherSettings = try jsonDecoder.decode(PublisherSettings.self, from: publisherArg.data(using: .utf8)!)
+                publisherSettings = try jsonDecoder.decode(PublisherSettings.self, from: publisherArg.data(using: .utf8)!)
             } catch {
                 if SwiftFlutterOpentokPlugin.loggingEnabled {
                     print("OpenTok publisher settings error: \(error.localizedDescription)")
@@ -66,7 +66,7 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
         }
 
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("FlutterOpenTokViewController initialized with size: \(screenWidth ?? 100) (w) x \(screenHeight ?? 100) (h)")
+            print("[FlutterOpenTokViewController] initialized with size: \(screenWidth ?? 100) (w) x \(screenHeight ?? 100) (h)")
         }
 
         super.init()
@@ -85,15 +85,15 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
 
     fileprivate func configureAudioSession() {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("Configure audio session")
-            print("Switched to speaker = \(switchedToSpeaker)")
+            print("[FlutterOpenTokViewController] Configure audio session")
+            print("[FlutterOpenTokViewController] Switched to speaker = \(switchedToSpeaker)")
         }
 
         do {
             try AVAudioSession.sharedInstance().setCategory(.playAndRecord, options: [.mixWithOthers, .allowBluetooth])
         } catch {
             if SwiftFlutterOpentokPlugin.loggingEnabled {
-                print("Session setCategory error: \(error)")
+                print("[FlutterOpenTokViewController] Session setCategory error: \(error)")
             }
         }
 
@@ -101,7 +101,7 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
             try AVAudioSession.sharedInstance().setMode(switchedToSpeaker ? AVAudioSession.Mode.videoChat : AVAudioSession.Mode.voiceChat)
         } catch {
             if SwiftFlutterOpentokPlugin.loggingEnabled {
-                print("Session setMode error: \(error)")
+                print("[FlutterOpenTokViewController] Session setMode error: \(error)")
             }
         }
 
@@ -109,7 +109,7 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
             try AVAudioSession.sharedInstance().overrideOutputAudioPort(switchedToSpeaker ? .speaker : .none)
         } catch {
             if SwiftFlutterOpentokPlugin.loggingEnabled {
-                print("Session overrideOutputAudioPort error: \(error)")
+                print("[FlutterOpenTokViewController] Session overrideOutputAudioPort error: \(error)")
             }
         }
 
@@ -117,21 +117,21 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
             if SwiftFlutterOpentokPlugin.loggingEnabled {
-                print("Session setActive error: \(error)")
+                print("[FlutterOpenTokViewController] Session setActive error: \(error)")
             }
         }
     }
 
     fileprivate func closeAudioSession() {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("Close audio session")
+            print("[FlutterOpenTokViewController] Close audio session")
         }
 
         do {
             try AVAudioSession.sharedInstance().setActive(false)
         } catch {
             if SwiftFlutterOpentokPlugin.loggingEnabled {
-                print("Session setActive error: \(error)")
+                print("[FlutterOpenTokViewController] Session setActive error: \(error)")
             }
         }
     }
@@ -149,7 +149,7 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
      for the application.
      */
     private func createProvider() {
-        provider = OpenTokVoIPImpl(delegate: self, publisherSettings: self.publisherSettings)
+        provider = OpenTokVoIPImpl(delegate: self, publisherSettings: publisherSettings)
     }
 }
 
@@ -242,16 +242,16 @@ extension FlutterOpenTokViewController: VoIPProviderDelegate {
     func didCreateStream() {
         channelInvokeMethod("onCreateStream", arguments: nil)
     }
-    
+
     func didCreatePublisherStream() {
         channelInvokeMethod("onCreatePublisherStream", arguments: nil)
     }
-    
+
     func willConnect() {
         configureAudioSession()
-        
+
         channelInvokeMethod("onWillConnect", arguments: nil)
-        
+
         if let enablePublisherVideo = self.enablePublisherVideo {
             if enablePublisherVideo == true {
                 let videoPermission = AVCaptureDevice.authorizationStatus(for: .video)
@@ -268,22 +268,22 @@ extension FlutterOpenTokViewController: VoIPProviderDelegate {
 
     func didDisconnect() {
         closeAudioSession()
-        
+
         channelInvokeMethod("onSessionDisconnect", arguments: nil)
     }
 
     func didReceiveVideo() {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("Receive video")
+            print("[FlutterOpenTokViewController] Receive video")
         }
-        
+
         channelInvokeMethod("onReceiveVideo", arguments: nil)
 
         if let view = self.videoView {
-            channelInvokeMethod("onReceiveVideo", arguments: nil)
+            channelInvokeMethod("[onReceiveVideo", arguments: nil)
 
             openTokView.addSubview(view)
-            
+
             view.backgroundColor = .black
             view.snp.makeConstraints { (make) -> Void in
                 make.top.equalTo(openTokView)

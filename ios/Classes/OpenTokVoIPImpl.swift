@@ -29,7 +29,7 @@ public protocol VoIPProvider {
 
     func mutePublisherAudio()
     func unmutePublisherAudio()
-    
+
     func muteSubscriberAudio()
     func unmuteSubscriberAudio()
 
@@ -72,7 +72,6 @@ class OpenTokVoIPImpl: NSObject {
 }
 
 extension OpenTokVoIPImpl: VoIPProvider {
-    
     var isConnected: Bool {
         return session?.connection != nil
     }
@@ -89,7 +88,7 @@ extension OpenTokVoIPImpl: VoIPProvider {
 
     func mutePublisherAudio() {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("Enable publisher audio")
+            print("[OpenTokVoIPImpl] Enable publisher audio")
         }
 
         if publisher != nil {
@@ -99,29 +98,29 @@ extension OpenTokVoIPImpl: VoIPProvider {
 
     func unmutePublisherAudio() {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("Unmute publisher audio")
+            print("[OpenTokVoIPImpl] Unmute publisher audio")
         }
 
         if publisher != nil {
             publisher.publishAudio = true
         }
     }
-    
+
     func muteSubscriberAudio() {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("Mute subscriber audio")
+            print("[OpenTokVoIPImpl] Mute subscriber audio")
         }
-        
+
         if subscriber != nil {
             subscriber.subscribeToAudio = false
         }
     }
-    
+
     func unmuteSubscriberAudio() {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("Unmute subscriber audio")
+            print("[OpenTokVoIPImpl] Unmute subscriber audio")
         }
-        
+
         if subscriber != nil {
             subscriber.subscribeToAudio = true
         }
@@ -129,20 +128,20 @@ extension OpenTokVoIPImpl: VoIPProvider {
 
     func enablePublisherVideo() {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("Enable publisher video")
+            print("[OpenTokVoIPImpl] Enable publisher video")
         }
 
         if publisher != nil {
             let videoPermission = AVCaptureDevice.authorizationStatus(for: .video)
             let videoEnabled = (videoPermission == .authorized)
-            
+
             publisher.publishVideo = videoEnabled
         }
     }
 
     func disablePublisherVideo() {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("Disable publisher video")
+            print("[OpenTokVoIPImpl] Disable publisher video")
         }
 
         if publisher != nil {
@@ -164,10 +163,10 @@ extension OpenTokVoIPImpl: VoIPProvider {
 private extension OpenTokVoIPImpl {
     func createSession(key: String, sessionId: String, token: String) {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("Create OTSession")
-            print("API key: \(key)")
-            print("Session ID: \(sessionId)")
-            print("Token: \(token)")
+            print("[OpenTokVoIPImpl] Create OTSession")
+            print("[OpenTokVoIPImpl] API key: \(key)")
+            print("[OpenTokVoIPImpl] Session ID: \(sessionId)")
+            print("[OpenTokVoIPImpl] Token: \(token)")
         }
 
         if key == "" || sessionId == "" || token == "" {
@@ -192,12 +191,12 @@ private extension OpenTokVoIPImpl {
 
         let settings = OTPublisherSettings()
 
-        settings.name = self.publisherSettings?.name ?? UIDevice.current.name
-        settings.videoTrack = self.publisherSettings?.videoTrack ?? true
-        settings.audioTrack = self.publisherSettings?.audioTrack ?? true
+        settings.name = publisherSettings?.name ?? UIDevice.current.name
+        settings.videoTrack = publisherSettings?.videoTrack ?? true
+        settings.audioTrack = publisherSettings?.audioTrack ?? true
         settings.cameraResolution = .high
         settings.cameraFrameRate = .rate30FPS
-        
+
         if SwiftFlutterOpentokPlugin.loggingEnabled {
             print(settings)
         }
@@ -310,7 +309,7 @@ extension OpenTokVoIPImpl: OTSessionDelegate {
         print(#function, stream)
 
         subscribe(toStream: stream)
-        
+
         delegate?.didCreateStream()
     }
 
@@ -336,7 +335,7 @@ extension OpenTokVoIPImpl: OTSessionDelegate {
 extension OpenTokVoIPImpl: OTPublisherDelegate {
     public func publisher(_: OTPublisherKit, streamCreated stream: OTStream) {
         print(#function, stream)
-        
+
         delegate?.didCreatePublisherStream()
     }
 
@@ -357,32 +356,48 @@ extension OpenTokVoIPImpl: OTPublisherDelegate {
 
 extension OpenTokVoIPImpl: OTSubscriberDelegate {
     public func subscriberDidConnect(toStream _: OTSubscriberKit) {
-        print(#function)
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
+            print("[OTSubscriberDelegate]", #function)
+        }
     }
 
     public func subscriberDidReconnect(toStream _: OTSubscriberKit) {
-        print(#function)
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
+            print("[OTSubscriberDelegate]", #function)
+        }
     }
 
     public func subscriberDidDisconnect(fromStream _: OTSubscriberKit) {
-        print(#function)
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
+            print("[OTSubscriberDelegate]", #function)
+        }
 
         unsubscribe()
     }
 
     public func subscriber(_: OTSubscriberKit, didFailWithError error: OTError) {
-        print(#function, error)
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
+            print("[OTSubscriberDelegate]", #function, error)
+        }
     }
 
     public func subscriberVideoEnabled(_: OTSubscriberKit, reason: OTSubscriberVideoEventReason) {
-        print(#function, reason)
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
+            print("[OTSubscriberDelegate]", #function, reason)
+        }
     }
 
     public func subscriberVideoDisabled(_: OTSubscriberKit, reason: OTSubscriberVideoEventReason) {
-        print(#function, reason)
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
+            print("[OTSubscriberDelegate]", #function, reason)
+        }
     }
 
     public func subscriberVideoDataReceived(_: OTSubscriber) {
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
+            print("[OTSubscriberDelegate] subscriberVideoDataReceived")
+        }
+
         if videoReceived == false {
             videoReceived = true
             delegate?.didReceiveVideo()
