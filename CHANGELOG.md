@@ -1,3 +1,7 @@
+## 0.0.6
+
+- Fix app crash.
+
 ## 0.0.5
 
 - Add system logging.

@@ -1,6 +1,6 @@
 name: flutter_opentok
 description: OpenTok Flutter - a library for OpenTok iOS and Android SDKs.
-version: 0.0.5
+version: 0.0.6
 author: Indoor Solutions <genert.org@indoor.solutions>
 homepage: https://github.com/ninjasolutions/flutter_opentok
 

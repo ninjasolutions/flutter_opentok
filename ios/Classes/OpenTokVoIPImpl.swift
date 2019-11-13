@@ -199,7 +199,7 @@ private extension OpenTokVoIPImpl {
         settings.cameraFrameRate = .rate30FPS
 
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            os_log("[OpenTokVoIPImpl] Settings: %@", type: .info, settings)
+            os_log("[OpenTokVoIPImpl] Settings: %@", type: .info, settings.description)
         }
 
         publisher = OTPublisher(delegate: self, settings: settings)
@@ -307,7 +307,7 @@ extension OpenTokVoIPImpl: OTSessionDelegate {
     }
 
     public func session(_: OTSession, streamCreated stream: OTStream) {
-        os_log("[OTSubscriberDelegate] %s %s", type: .info, #function, stream)
+        os_log("[OTSubscriberDelegate] %s", type: .info, #function)
 
         subscribe(toStream: stream)
 
@@ -315,15 +315,15 @@ extension OpenTokVoIPImpl: OTSessionDelegate {
     }
 
     public func session(_: OTSession, streamDestroyed stream: OTStream) {
-        os_log("[OTSubscriberDelegate] %s %s", type: .info, #function, stream)
+        os_log("[OTSubscriberDelegate] %s", type: .info, #function)
     }
 
     public func session(_: OTSession, connectionCreated connection: OTConnection) {
-        os_log("[OTSubscriberDelegate] %s %s", type: .info, #function, connection)
+        os_log("[OTSubscriberDelegate] %s", type: .info, #function)
     }
 
     public func session(_: OTSession, connectionDestroyed connection: OTConnection) {
-        os_log("[OTSubscriberDelegate] %s %s", type: .info, #function, connection)
+        os_log("[OTSubscriberDelegate] %s", type: .info, #function)
 
         disconnectSession()
     }
@@ -335,19 +335,19 @@ extension OpenTokVoIPImpl: OTSessionDelegate {
 
 extension OpenTokVoIPImpl: OTPublisherDelegate {
     public func publisher(_: OTPublisherKit, streamCreated stream: OTStream) {
-        os_log("[OTSubscriberDelegate] %s %s", type: .info, #function, stream)
+        os_log("[OTSubscriberDelegate] %s", type: .info, #function)
 
         delegate?.didCreatePublisherStream()
     }
 
     public func publisher(_: OTPublisherKit, streamDestroyed stream: OTStream) {
-        os_log("[OTSubscriberDelegate] %s %s", type: .info, #function, stream)
+        os_log("[OTSubscriberDelegate] %s", type: .info, #function)
 
         unpublish()
     }
 
     public func publisher(_: OTPublisherKit, didFailWithError error: OTError) {
-        os_log("[OTSubscriberDelegate] %s %s", type: .info, #function, error)
+        os_log("[OTSubscriberDelegate] %s %s", type: .info, #function, error.description)
     }
 
     public func publisher(_: OTPublisher, didChangeCameraPosition position: AVCaptureDevice.Position) {
