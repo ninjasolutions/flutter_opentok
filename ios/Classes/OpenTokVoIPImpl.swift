@@ -7,6 +7,7 @@
 
 import Foundation
 import OpenTok
+import os.log
 
 protocol VoIPProviderDelegate {
     func willConnect()
@@ -66,7 +67,7 @@ class OpenTokVoIPImpl: NSObject {
 
     deinit {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("[DEINIT] OpenTokVoIPImpl")
+            os_log("[DEINIT] OpenTokVoIPImpl", type: .info)
         }
     }
 }
@@ -88,7 +89,7 @@ extension OpenTokVoIPImpl: VoIPProvider {
 
     func mutePublisherAudio() {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("[OpenTokVoIPImpl] Enable publisher audio")
+            os_log("[OpenTokVoIPImpl] Enable publisher audio", type: .info)
         }
 
         if publisher != nil {
@@ -98,7 +99,7 @@ extension OpenTokVoIPImpl: VoIPProvider {
 
     func unmutePublisherAudio() {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("[OpenTokVoIPImpl] Unmute publisher audio")
+            os_log("[OpenTokVoIPImpl] Unmute publisher audio", type: .info)
         }
 
         if publisher != nil {
@@ -108,7 +109,7 @@ extension OpenTokVoIPImpl: VoIPProvider {
 
     func muteSubscriberAudio() {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("[OpenTokVoIPImpl] Mute subscriber audio")
+            os_log("[OpenTokVoIPImpl] Mute subscriber audio", type: .info)
         }
 
         if subscriber != nil {
@@ -118,7 +119,7 @@ extension OpenTokVoIPImpl: VoIPProvider {
 
     func unmuteSubscriberAudio() {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("[OpenTokVoIPImpl] Unmute subscriber audio")
+            os_log("[OpenTokVoIPImpl] Unmute subscriber audio", type: .info)
         }
 
         if subscriber != nil {
@@ -128,7 +129,7 @@ extension OpenTokVoIPImpl: VoIPProvider {
 
     func enablePublisherVideo() {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("[OpenTokVoIPImpl] Enable publisher video")
+            os_log("[OpenTokVoIPImpl] Enable publisher video", type: .info)
         }
 
         if publisher != nil {
@@ -141,7 +142,7 @@ extension OpenTokVoIPImpl: VoIPProvider {
 
     func disablePublisherVideo() {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("[OpenTokVoIPImpl] Disable publisher video")
+            os_log("[OpenTokVoIPImpl] Disable publisher video", type: .info)
         }
 
         if publisher != nil {
@@ -163,10 +164,10 @@ extension OpenTokVoIPImpl: VoIPProvider {
 private extension OpenTokVoIPImpl {
     func createSession(key: String, sessionId: String, token: String) {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("[OpenTokVoIPImpl] Create OTSession")
-            print("[OpenTokVoIPImpl] API key: \(key)")
-            print("[OpenTokVoIPImpl] Session ID: \(sessionId)")
-            print("[OpenTokVoIPImpl] Token: \(token)")
+            os_log("[OpenTokVoIPImpl] Create OTSession", type: .info)
+            os_log("[OpenTokVoIPImpl] API key: %s", type: .info, key)
+            os_log("[OpenTokVoIPImpl] Session ID: %s", type: .info, sessionId)
+            os_log("[OpenTokVoIPImpl] Token: %s", type: .info, token)
         }
 
         if key == "" || sessionId == "" || token == "" {
@@ -186,7 +187,7 @@ private extension OpenTokVoIPImpl {
 
     func publish() {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("Publish")
+            os_log("[OpenTokVoIPImpl] Publish", type: .info)
         }
 
         let settings = OTPublisherSettings()
@@ -198,7 +199,7 @@ private extension OpenTokVoIPImpl {
         settings.cameraFrameRate = .rate30FPS
 
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print(settings)
+            os_log("[OpenTokVoIPImpl] Settings: %@", type: .info, settings)
         }
 
         publisher = OTPublisher(delegate: self, settings: settings)
@@ -211,7 +212,7 @@ private extension OpenTokVoIPImpl {
 
         guard error == nil else {
             if SwiftFlutterOpentokPlugin.loggingEnabled {
-                print(error.debugDescription)
+                os_log("[OpenTokVoIPImpl] %s", type: .info, error.debugDescription)
             }
             return
         }
@@ -220,7 +221,7 @@ private extension OpenTokVoIPImpl {
     func unpublish() {
         if publisher != nil {
             if SwiftFlutterOpentokPlugin.loggingEnabled {
-                print("Unpublish")
+                os_log("[OpenTokVoIPImpl] Unpublish")
             }
 
             session.unpublish(publisher, error: nil)
@@ -230,7 +231,7 @@ private extension OpenTokVoIPImpl {
 
     func subscribe(toStream stream: OTStream) {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("Subscribe to stream \(stream.name ?? "<No stream name>")")
+            os_log("[OpenTokVoIPImpl] Subscribe to stream %s", type: .info, stream.name ?? "<No stream name>")
         }
 
         subscriber = OTSubscriber(stream: stream, delegate: self)
@@ -241,7 +242,7 @@ private extension OpenTokVoIPImpl {
     func unsubscribe() {
         if subscriber != nil {
             if SwiftFlutterOpentokPlugin.loggingEnabled {
-                print("Unsubscribe")
+                os_log("[OpenTokVoIPImpl] Unsubscribe")
             }
 
             session.unsubscribe(subscriber, error: nil)
@@ -265,7 +266,7 @@ private extension OpenTokVoIPImpl {
     private func process(error err: OTError?) {
         if let e = err {
             if SwiftFlutterOpentokPlugin.loggingEnabled {
-                print(e.localizedDescription)
+                os_log("[OTSubscriberDelegate] %s", type: .info, e.localizedDescription)
             }
         }
     }
@@ -273,17 +274,17 @@ private extension OpenTokVoIPImpl {
 
 extension OpenTokVoIPImpl: OTSessionDelegate {
     public func sessionDidConnect(_: OTSession) {
-        print(#function)
+        os_log("[OTSubscriberDelegate] %s", type: .info, #function)
         publish()
         delegate?.didConnect()
     }
 
     public func sessionDidReconnect(_: OTSession) {
-        print(#function)
+        os_log("[OTSubscriberDelegate] %s", type: .info, #function)
     }
 
     public func sessionDidDisconnect(_: OTSession) {
-        print(#function)
+        os_log("[OTSubscriberDelegate] %s", type: .info, #function)
 
         unsubscribe()
         unpublish()
@@ -298,15 +299,15 @@ extension OpenTokVoIPImpl: OTSessionDelegate {
     }
 
     public func sessionDidBeginReconnecting(_: OTSession) {
-        print(#function)
+        os_log("[OTSubscriberDelegate] %s", type: .info, #function)
     }
 
     public func session(_: OTSession, didFailWithError error: OTError) {
-        print(#function, error)
+        os_log("[OTSubscriberDelegate] %s %s", type: .info, #function, error)
     }
 
     public func session(_: OTSession, streamCreated stream: OTStream) {
-        print(#function, stream)
+        os_log("[OTSubscriberDelegate] %s %s", type: .info, #function, stream)
 
         subscribe(toStream: stream)
 
@@ -314,62 +315,62 @@ extension OpenTokVoIPImpl: OTSessionDelegate {
     }
 
     public func session(_: OTSession, streamDestroyed stream: OTStream) {
-        print(#function, stream)
+        os_log("[OTSubscriberDelegate] %s %s", type: .info, #function, stream)
     }
 
     public func session(_: OTSession, connectionCreated connection: OTConnection) {
-        print(#function, connection)
+        os_log("[OTSubscriberDelegate] %s %s", type: .info, #function, connection)
     }
 
     public func session(_: OTSession, connectionDestroyed connection: OTConnection) {
-        print(#function, connection)
+        os_log("[OTSubscriberDelegate] %s %s", type: .info, #function, connection)
 
         disconnectSession()
     }
 
     public func session(_: OTSession, receivedSignalType type: String?, from connection: OTConnection?, with string: String?) {
-        print(#function, type ?? "<No signal type>", connection ?? "<Nil connection>", string ?? "<No string>")
+        os_log("[OTSubscriberDelegate] %s %s %s %s", type: .info, #function, type ?? "<No signal type>", connection ?? "<Nil connection>", string ?? "<No string>")
     }
 }
 
 extension OpenTokVoIPImpl: OTPublisherDelegate {
     public func publisher(_: OTPublisherKit, streamCreated stream: OTStream) {
-        print(#function, stream)
+        os_log("[OTSubscriberDelegate] %s %s", type: .info, #function, stream)
 
         delegate?.didCreatePublisherStream()
     }
 
     public func publisher(_: OTPublisherKit, streamDestroyed stream: OTStream) {
-        print(#function, stream)
+        os_log("[OTSubscriberDelegate] %s %s", type: .info, #function, stream)
 
         unpublish()
     }
 
     public func publisher(_: OTPublisherKit, didFailWithError error: OTError) {
-        print(#function, error)
+        os_log("[OTSubscriberDelegate] %s %s", type: .info, #function, error)
     }
 
     public func publisher(_: OTPublisher, didChangeCameraPosition position: AVCaptureDevice.Position) {
-        print(#function, position)
+        os_log("[OTSubscriberDelegate] %s %d", type: .info, #function, position.rawValue)
     }
 }
 
 extension OpenTokVoIPImpl: OTSubscriberDelegate {
     public func subscriberDidConnect(toStream _: OTSubscriberKit) {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("[OTSubscriberDelegate]", #function)
+            os_log("[OTSubscriberDelegate] %@", type: .info, #function)
         }
     }
 
     public func subscriberDidReconnect(toStream _: OTSubscriberKit) {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("[OTSubscriberDelegate]", #function)
+            os_log("[OTSubscriberDelegate] %@", type: .info, #function)
         }
     }
 
     public func subscriberDidDisconnect(fromStream _: OTSubscriberKit) {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("[OTSubscriberDelegate]", #function)
+            os_log("[OTSubscriberDelegate] %@", type: .info, #function)
         }
 
         unsubscribe()
@@ -377,25 +378,25 @@ extension OpenTokVoIPImpl: OTSubscriberDelegate {
 
     public func subscriber(_: OTSubscriberKit, didFailWithError error: OTError) {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("[OTSubscriberDelegate]", #function, error)
+            os_log("[OTSubscriberDelegate] subscriber %@", type: .info, error)
         }
     }
 
     public func subscriberVideoEnabled(_: OTSubscriberKit, reason: OTSubscriberVideoEventReason) {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("[OTSubscriberDelegate]", #function, reason)
+            os_log("[OTSubscriberDelegate] subscriberVideoEnabled %d", type: .info, reason.rawValue)
         }
     }
 
     public func subscriberVideoDisabled(_: OTSubscriberKit, reason: OTSubscriberVideoEventReason) {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("[OTSubscriberDelegate]", #function, reason)
+            os_log("[OTSubscriberDelegate] subscriberVideoDisabled %d", type: .info, reason.rawValue)
         }
     }
 
     public func subscriberVideoDataReceived(_: OTSubscriber) {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print("[OTSubscriberDelegate] subscriberVideoDataReceived")
+            os_log("[OTSubscriberDelegate] subscriberVideoDataReceived", type: .info)
         }
 
         if videoReceived == false {

@@ -1,3 +1,7 @@
+## 0.0.5
+
+- Add system logging.
+
 ## 0.0.4
 
 - Add debugging support.
