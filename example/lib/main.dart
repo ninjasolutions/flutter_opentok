@@ -188,6 +188,9 @@ class _MyAppState extends State<MyApp> {
       name: "Mr. John Doe",
       audioTrack: true,
       videoTrack: publishVideo,
+      audioBitrate: 40000,
+      cameraResolution: OTCameraCaptureResolution.OTCameraCaptureResolutionHigh,
+      cameraFrameRate: OTCameraCaptureFrameRate.OTCameraCaptureFrameRate30FPS,
     );
     Widget view = OTFlutter.createNativeView(uid,
         publisherSettings: publisherSettings, created: (viewId) async {

@@ -178,6 +178,18 @@ class OTFlutter {
         creationParams: creationParams,
         creationParamsCodec: StandardMessageCodec(),
       );
+    } else if (defaultTargetPlatform == TargetPlatform.android) {
+      return AndroidView(
+        key: new ObjectKey(uid.toString()),
+        viewType: 'OpenTokRendererView',
+        onPlatformViewCreated: (viewId) {
+          if (created != null) {
+            created(viewId);
+          }
+        },
+        creationParams: creationParams,
+        creationParamsCodec: StandardMessageCodec(),
+      );
     }
 
     return Text('$defaultTargetPlatform is not yet supported by this plugin');
