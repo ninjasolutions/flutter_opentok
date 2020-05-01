@@ -2,43 +2,57 @@ package com.flutter_opentok
 
 import android.content.Context
 import android.graphics.Color
+import android.opengl.GLSurfaceView
+import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.LinearLayout
+import com.opentok.android.AudioDeviceManager
+import com.opentok.android.BaseAudioDevice
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.PluginRegistry
 import io.flutter.plugin.platform.PlatformView
-import kotlinx.serialization.json.*
-import java.lang.Exception
-import com.opentok.android.*
+import kotlinx.serialization.json.Json
+
 
 class FlutterOpenTokView(
         var registrar: PluginRegistry.Registrar,
         override var context: Context,
         var viewId: Int,
-        var args: Any?) : PlatformView, MethodChannel.MethodCallHandler, VoIPProviderDelegate {
+        var args: Any?) : PlatformView, MethodChannel.MethodCallHandler, VoIPProviderDelegate, View.OnTouchListener {
 
     var publisherSettings: PublisherSettings? = null
     var enablePublisherVideo: Boolean? = null
     var switchedToSpeaker: Boolean = true
     var provider: VoIPProvider? = null
     var channel: MethodChannel
-    val openTokView: LinearLayout
-//    var screenHeight: Int? = null
-//    var screenWidth: Int? = null
+    val openTokView: FrameLayout
+    var screenHeight: Int = LinearLayout.LayoutParams.MATCH_PARENT
+    var screenWidth: Int = LinearLayout.LayoutParams.MATCH_PARENT
+    var publisherHeight: Int = 500
+    var publisherWidth: Int = 350
 
     init {
         val channelName = "plugins.indoor.solutions/opentok_$viewId"
         channel = MethodChannel(registrar.messenger(), channelName)
 
-        openTokView = LinearLayout(context)
-        openTokView.layoutParams = LinearLayout.LayoutParams(400 , 400)
+        val arguments: Map<*, *>? = args as? Map<*, *>
+        if (arguments?.containsKey("height") == true)
+            screenHeight = arguments?.get("height") as Int
+        if (arguments?.containsKey("width") == true)
+            screenWidth = arguments?.get("width") as Int
+
+        if (arguments?.containsKey("publisherHeight") == true)
+            publisherHeight = arguments?.get("publisherHeight") as Int
+        if (arguments?.containsKey("publisherWidth") == true)
+            publisherWidth = arguments?.get("publisherWidth") as Int
+
+        openTokView = FrameLayout(context)
+        openTokView.layoutParams = LinearLayout.LayoutParams(screenWidth, screenHeight)
         openTokView.setBackgroundColor(Color.WHITE)
 
-        val arguments: Map<*, *>? = args as? Map<*, *>
-//        screenHeight = arguments?.get("height") as? Int
-//        screenWidth = arguments?.get("width") as? Int
         val publisherArg = arguments?.get("publisherSettings") as? String
         try {
             publisherSettings = publisherArg?.let { Json.parse(PublisherSettings.serializer(), it) }
@@ -84,10 +98,17 @@ class FlutterOpenTokView(
     }
 
     // Convenience getter for current video view based on provider implementation
-    val videoView: View?
+    val subscriberView: View?
         get() {
             if (provider is OpenTokVoIPImpl)
                 return (provider as OpenTokVoIPImpl).subscriberView
+            return null
+        }
+
+    val publisherView: View?
+        get() {
+            if (provider is OpenTokVoIPImpl)
+                return (provider as OpenTokVoIPImpl).publisherView
             return null
         }
 
@@ -185,6 +206,17 @@ class FlutterOpenTokView(
     override fun didConnect() {
         configureAudioSession()
 
+        if (publisherView != null) {
+            val pubView: View = publisherView!!
+            openTokView.addView(pubView)
+            pubView.setOnTouchListener(this);
+            val layout = FrameLayout.LayoutParams(publisherWidth, publisherHeight, Gravity.TOP or Gravity.RIGHT)
+            layout.setMargins(20,20,20,20)
+            pubView.layoutParams = layout
+            if (pubView is GLSurfaceView) {
+                (pubView as GLSurfaceView).setZOrderOnTop(true)
+            }
+        }
         channelInvokeMethod("onSessionConnect", null)
     }
 
@@ -197,9 +229,20 @@ class FlutterOpenTokView(
             print("[FlutterOpenTokView] Receive video")
         }
 
-        videoView?.let { openTokView.addView(videoView) }
-        videoView?.layoutParams = LinearLayout.LayoutParams(200,200)
-        videoView?.setBackgroundColor(Color.GREEN)
+        if (subscriberView != null) {
+            val subView: View = subscriberView!!
+            if (openTokView.childCount > 0) {
+                openTokView.removeAllViews()
+                openTokView.addView(subView)
+                openTokView.addView(publisherView)
+            } else {
+                openTokView.addView(subView)
+            }
+
+            if (subView is GLSurfaceView) {
+                (subView as GLSurfaceView).setZOrderOnTop(true)
+            }
+        }
         channelInvokeMethod("onReceiveVideo", null)
     }
 
@@ -209,5 +252,38 @@ class FlutterOpenTokView(
 
     override fun didCreatePublisherStream() {
         channelInvokeMethod("onCreatePublisherStream", null)
+    }
+
+    /// TouchListener
+    var dX: Float = 0F
+    var dY: Float = 0F
+    override fun onTouch(view: View?, event: MotionEvent?): Boolean {
+        when (event!!.action) {
+            MotionEvent.ACTION_DOWN -> {
+                dX = view!!.x - event.rawX
+                dY = view.y - event.rawY
+            }
+            MotionEvent.ACTION_MOVE -> {
+                var newX = event.rawX + dX
+                if (newX < 0)
+                    newX = 0F
+                if (newX > openTokView.width - view!!.width)
+                    newX = (openTokView.width - view!!.width).toFloat()
+
+                var newY = event.rawY + dY
+                if (newY < 0)
+                    newY = 0F
+                if (newY > openTokView.height - view!!.height)
+                    newY = (openTokView.height - view!!.height).toFloat()
+
+                view!!.animate()
+                        .x(newX)
+                        .y(newY)
+                        .setDuration(0)
+                        .start()
+            }
+            else -> return false
+        }
+        return true
     }
 }

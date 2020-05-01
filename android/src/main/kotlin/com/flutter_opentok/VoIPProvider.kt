@@ -52,6 +52,11 @@ class OpenTokVoIPImpl(
             return subscriber?.view
         }
 
+    val publisherView: View?
+        get() {
+            return publisher?.view
+        }
+
     var publishVideo: Boolean = false
         set(value) {
             publisher?.publishVideo = value

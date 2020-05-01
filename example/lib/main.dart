@@ -120,20 +120,12 @@ class _MyAppState extends State<MyApp> {
     return _sessions.map((session) => session.view).toList();
   }
 
-  /// Video view wrapper
-  Widget _videoView(view) {
-    return Expanded(child: Container(child: view));
-  }
-
   Widget _viewRows() {
     List<Widget> views = _getRenderViews();
-    switch (views.length) {
-      case 1:
-        return Container(
-            child: Column(
-          children: <Widget>[_videoView(views[0])],
-        ));
-      default:
+    if (views.isNotEmpty) {
+      return Container (
+        child: Expanded(child: views[0]),
+      );
     }
 
     return Container();
