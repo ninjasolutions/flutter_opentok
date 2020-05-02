@@ -10,6 +10,7 @@ interface VoIPProviderDelegate {
     fun didDisconnect()
     fun didReceiveVideo()
     fun didCreateStream()
+    fun didDropStream()
     fun didCreatePublisherStream()
 
     val context: Context
@@ -57,7 +58,10 @@ class OpenTokVoIPImpl(
             return publisher?.view
         }
 
-    var publishVideo: Boolean = false
+    var publishVideo: Boolean
+        get() {
+            return publisher?.publishVideo!!
+        }
         set(value) {
             publisher?.publishVideo = value
         }
@@ -187,6 +191,7 @@ class OpenTokVoIPImpl(
             print("[SessionListener] onStreamDropped")
         }
         unsubscribe()
+        delegate?.didDropStream()
     }
 
     override fun onStreamReceived(session: Session?, stream: Stream?) {
@@ -244,7 +249,7 @@ class OpenTokVoIPImpl(
                 .build()
 
         publisher?.setPublisherListener(this)
-        //publisher?.cycleCamera()
+        publisher?.publishVideo = false
         session?.publish(publisher)
     }
 

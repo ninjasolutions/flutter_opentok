@@ -42,8 +42,12 @@ class OTFlutter {
   /// Occurs when subscriber stream has been created.
   static VoidCallback onCreateStream;
 
+  /// Occurs when subscriber stream has been dropped.
+  static VoidCallback onDroppedStream;
+
   /// Occurs when publisher stream has been created.
   static VoidCallback onCreatePublisherStream;
+
 
   // Core Methods
   /// Creates an OpenTok instance.
@@ -251,6 +255,12 @@ class OTFlutter {
       case 'onWillConnect':
         if (onWillConnect != null) {
           onWillConnect();
+        }
+        break;
+
+      case 'onDroppedStream':
+        if (onDroppedStream != null) {
+          onDroppedStream();
         }
         break;
 

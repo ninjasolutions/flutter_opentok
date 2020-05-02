@@ -24,7 +24,6 @@ class FlutterOpenTokView(
         var args: Any?) : PlatformView, MethodChannel.MethodCallHandler, VoIPProviderDelegate, View.OnTouchListener {
 
     var publisherSettings: PublisherSettings? = null
-    var enablePublisherVideo: Boolean? = null
     var switchedToSpeaker: Boolean = true
     var provider: VoIPProvider? = null
     var channel: MethodChannel
@@ -51,7 +50,7 @@ class FlutterOpenTokView(
 
         openTokView = FrameLayout(context)
         openTokView.layoutParams = LinearLayout.LayoutParams(screenWidth, screenHeight)
-        openTokView.setBackgroundColor(Color.WHITE)
+        openTokView.setBackgroundColor(Color.TRANSPARENT)
 
         val publisherArg = arguments?.get("publisherSettings") as? String
         try {
@@ -137,9 +136,11 @@ class FlutterOpenTokView(
             result.success(null)
         } else if (call.method == "enablePublisherVideo") {
             provider?.enablePublisherVideo()
+            refreshViews()
             result.success(null)
         } else if (call.method == "disablePublisherVideo") {
             provider?.disablePublisherVideo()
+            refreshViews()
             result.success(null)
         } else if (call.method == "unmutePublisherAudio") {
             provider?.unmutePublisherAudio()
@@ -194,19 +195,21 @@ class FlutterOpenTokView(
         })
     }
 
-    /// VoIPProviderDelegate
-
-    override fun willConnect() {
-        channelInvokeMethod("onWillConnect", null)
-        if (enablePublisherVideo == true) {
-            provider?.isAudioOnly = false
+    private fun refreshViews() {
+        if (openTokView.childCount > 0) {
+            openTokView.removeAllViews()
         }
-    }
 
-    override fun didConnect() {
-        configureAudioSession()
+        if (subscriberView != null) {
+            val subView: View = subscriberView!!
+            openTokView.addView(subView)
 
-        if (publisherView != null) {
+            if (subView is GLSurfaceView) {
+                (subView as GLSurfaceView).setZOrderOnTop(true)
+            }
+        }
+
+        if (provider?.isAudioOnly == false && publisherView != null) {
             val pubView: View = publisherView!!
             openTokView.addView(pubView)
             pubView.setOnTouchListener(this);
@@ -217,6 +220,17 @@ class FlutterOpenTokView(
                 (pubView as GLSurfaceView).setZOrderOnTop(true)
             }
         }
+    }
+
+    /// VoIPProviderDelegate
+
+    override fun willConnect() {
+        channelInvokeMethod("onWillConnect", null)
+    }
+
+    override fun didConnect() {
+        configureAudioSession()
+        refreshViews()
         channelInvokeMethod("onSessionConnect", null)
     }
 
@@ -228,21 +242,7 @@ class FlutterOpenTokView(
         if (FlutterOpentokPlugin.loggingEnabled) {
             print("[FlutterOpenTokView] Receive video")
         }
-
-        if (subscriberView != null) {
-            val subView: View = subscriberView!!
-            if (openTokView.childCount > 0) {
-                openTokView.removeAllViews()
-                openTokView.addView(subView)
-                openTokView.addView(publisherView)
-            } else {
-                openTokView.addView(subView)
-            }
-
-            if (subView is GLSurfaceView) {
-                (subView as GLSurfaceView).setZOrderOnTop(true)
-            }
-        }
+        refreshViews()
         channelInvokeMethod("onReceiveVideo", null)
     }
 
@@ -252,6 +252,10 @@ class FlutterOpenTokView(
 
     override fun didCreatePublisherStream() {
         channelInvokeMethod("onCreatePublisherStream", null)
+    }
+
+    override fun didDropStream() {
+        channelInvokeMethod("onDroppedStream", null)
     }
 
     /// TouchListener

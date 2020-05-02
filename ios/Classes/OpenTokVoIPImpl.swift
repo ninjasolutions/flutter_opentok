@@ -15,6 +15,7 @@ protocol VoIPProviderDelegate {
     func didDisconnect()
     func didReceiveVideo()
     func didCreateStream()
+    func didDropStream()
     func didCreatePublisherStream()
 }
 
@@ -204,6 +205,7 @@ private extension OpenTokVoIPImpl {
 
         publisher = OTPublisher(delegate: self, settings: settings)
         publisher.cameraPosition = .front
+        publisher.publishVideo = false
 
         // Publish publisher to session
         var error: OTError?
@@ -316,6 +318,8 @@ extension OpenTokVoIPImpl: OTSessionDelegate {
 
     public func session(_: OTSession, streamDestroyed stream: OTStream) {
         os_log("[OTSubscriberDelegate] %s", type: .info, #function)
+
+        delegate?.didDropStream()
     }
 
     public func session(_: OTSession, connectionCreated connection: OTConnection) {
@@ -374,6 +378,7 @@ extension OpenTokVoIPImpl: OTSubscriberDelegate {
         }
 
         unsubscribe()
+        delegate?.didDropStream()
     }
 
     public func subscriber(_: OTSubscriberKit, didFailWithError error: OTError) {
