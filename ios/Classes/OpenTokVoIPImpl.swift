@@ -37,6 +37,8 @@ public protocol VoIPProvider {
 
     func enablePublisherVideo()
     func disablePublisherVideo()
+    
+    func switchCamera()
 }
 
 class OpenTokVoIPImpl: NSObject {
@@ -152,6 +154,17 @@ extension OpenTokVoIPImpl: VoIPProvider {
 
         if publisher != nil {
             publisher.publishVideo = false
+        }
+    }
+    
+    func switchCamera() {
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
+            os_log("[OpenTokVoIPImpl] Switch camera", type: .info)
+        }
+        if publisher.cameraPosition == .front {
+            publisher.cameraPosition = .back
+        } else {
+            publisher.cameraPosition = .front
         }
     }
 

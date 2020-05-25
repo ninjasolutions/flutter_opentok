@@ -226,7 +226,11 @@ extension FlutterOpenTokViewController: FlutterViewControllerImpl {
         } else if call.method == "switchAudioToReceiver" {
             switchAudioSessionToReceiver()
             result(nil)
-        } else if call.method == "getSdkVersion" {
+        } else if call.method == "switchCamera" {
+            provider.switchCamera()
+            result(nil)
+        }
+        else if call.method == "getSdkVersion" {
             result(OPENTOK_LIBRARY_VERSION)
         } else {
             result(FlutterMethodNotImplemented)
