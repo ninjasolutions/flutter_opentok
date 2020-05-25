@@ -46,6 +46,10 @@ class OpenTokVoIPImpl: NSObject {
     var subscriberView: UIView? {
         return subscriber?.view
     }
+    
+    var publisherView: UIView? {
+        return publisher?.view
+    }
 
     init(delegate: VoIPProviderDelegate?, publisherSettings: PublisherSettings?) {
         super.init()
