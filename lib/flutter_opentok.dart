@@ -143,6 +143,16 @@ class OTFlutter {
     await channel.invokeMethod('disableVideo');
   }
 
+  /// Switch the audio output to use speakers
+  Future<void> switchAudioToSpeaker() async {
+    await channel.invokeMethod("switchAudioToSpeaker");
+  }
+
+  /// Switch the audio output to use phone
+  Future<void> switchAudioToPhone() async {
+    await channel.invokeMethod("switchAudioToReceiver");
+  }
+
   /// Creates the video renderer Widget.
   ///
   static Widget createNativeView(
