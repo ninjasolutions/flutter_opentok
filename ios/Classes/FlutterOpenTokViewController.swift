@@ -221,10 +221,12 @@ extension FlutterOpenTokViewController: FlutterViewControllerImpl {
             provider?.unmuteSubscriberAudio()
             result(nil)
         } else if call.method == "switchAudioToSpeaker" {
-            switchAudioSessionToSpeaker()
+            switchedToSpeaker = true
+            configureAudioSession()
             result(nil)
         } else if call.method == "switchAudioToReceiver" {
-            switchAudioSessionToReceiver()
+            switchedToSpeaker = false
+            configureAudioSession()
             result(nil)
         } else if call.method == "switchCamera" {
             provider.switchCamera()
@@ -354,40 +356,6 @@ extension FlutterOpenTokViewController: VoIPProviderDelegate {
             }
             viewToDrag.center = CGPoint(x: x, y: y)
             sender.setTranslation(CGPoint(x: 0, y: 0), in: viewToDrag)
-        }
-    }
-}
-
-extension FlutterOpenTokViewController {
-    func switchAudioSessionToSpeaker() {
-        if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print(#function)
-        }
-
-        do {
-            try AVAudioSession.sharedInstance().setMode(AVAudioSession.Mode.videoChat)
-            try AVAudioSession.sharedInstance().overrideOutputAudioPort(AVAudioSession.PortOverride.speaker)
-            switchedToSpeaker = true
-        } catch {
-            if SwiftFlutterOpentokPlugin.loggingEnabled {
-                print("Session overrideOutputAudioPort error: \(error)")
-            }
-        }
-    }
-
-    func switchAudioSessionToReceiver() {
-        if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print(#function)
-        }
-
-        do {
-            try AVAudioSession.sharedInstance().setMode(AVAudioSession.Mode.voiceChat)
-            try AVAudioSession.sharedInstance().overrideOutputAudioPort(AVAudioSession.PortOverride.none)
-            switchedToSpeaker = false
-        } catch {
-            if SwiftFlutterOpentokPlugin.loggingEnabled {
-                print("Session overrideOutputAudioPort error: \(error)")
-            }
         }
     }
 }
