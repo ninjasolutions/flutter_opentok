@@ -275,21 +275,11 @@ extension FlutterOpenTokViewController: VoIPProviderDelegate {
     }
 
     func willConnect() {
-        configureAudioSession()
-
         channelInvokeMethod("onWillConnect", arguments: nil)
-
-        if let enablePublisherVideo = self.enablePublisherVideo {
-            if enablePublisherVideo == true {
-                let videoPermission = AVCaptureDevice.authorizationStatus(for: .video)
-                let videoEnabled = (videoPermission == .authorized)
-
-                provider?.isAudioOnly = !videoEnabled
-            }
-        }
     }
 
     func didConnect() {
+        configureAudioSession()
         refreshViews()
         channelInvokeMethod("onSessionConnect", arguments: nil)
     }
@@ -327,7 +317,7 @@ extension FlutterOpenTokViewController: VoIPProviderDelegate {
             }
         }
         
-        if (provider.isAudioOnly == false) {
+        if provider.isAudioOnly == false {
             if let view = self.publisherView {
                 openTokView.addSubview(view)
                 
