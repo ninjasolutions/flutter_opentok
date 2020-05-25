@@ -198,6 +198,7 @@ private extension OpenTokVoIPImpl {
     }
 
     func disconnectSession() {
+        unpublish()
         if session != nil {
             session.disconnect(nil)
         }
@@ -213,8 +214,29 @@ private extension OpenTokVoIPImpl {
         settings.name = publisherSettings?.name ?? UIDevice.current.name
         settings.videoTrack = publisherSettings?.videoTrack ?? true
         settings.audioTrack = publisherSettings?.audioTrack ?? true
-        settings.cameraResolution = .high
-        settings.cameraFrameRate = .rate30FPS
+        switch publisherSettings?.cameraResolution {
+            case .none:
+                settings.cameraResolution = .high
+            case .some(.OTCameraCaptureResolutionLow):
+                settings.cameraResolution = .low
+            case .some(.OTCameraCaptureResolutionMedium):
+                settings.cameraResolution = .medium
+            case .some(.OTCameraCaptureResolutionHigh):
+                settings.cameraResolution = .high
+        }
+        switch publisherSettings?.cameraFrameRate {
+            case .none:
+                settings.cameraFrameRate = .rate30FPS
+            case .some(.OTCameraCaptureFrameRate1FPS):
+                settings.cameraFrameRate = .rate1FPS
+            case .some(.OTCameraCaptureFrameRate30FPS):
+                settings.cameraFrameRate = .rate30FPS
+            case .some(.OTCameraCaptureFrameRate15FPS):
+                settings.cameraFrameRate = .rate15FPS
+            case .some(.OTCameraCaptureFrameRate7FPS):
+                settings.cameraFrameRate = .rate7FPS
+        }
+        
 
         if SwiftFlutterOpentokPlugin.loggingEnabled {
             os_log("[OpenTokVoIPImpl] Settings: %@", type: .info, settings.description)

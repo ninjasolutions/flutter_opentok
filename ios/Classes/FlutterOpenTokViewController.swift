@@ -402,9 +402,24 @@ extension FlutterOpenTokViewController {
     }
 }
 
+enum OTCameraCaptureResolution: String, Codable {
+    case OTCameraCaptureResolutionLow,
+         OTCameraCaptureResolutionMedium,
+         OTCameraCaptureResolutionHigh
+}
+
+enum OTCameraCaptureFrameRate: String, Codable {
+  case OTCameraCaptureFrameRate30FPS,
+    OTCameraCaptureFrameRate15FPS,
+    OTCameraCaptureFrameRate7FPS,
+    OTCameraCaptureFrameRate1FPS
+}
+
 struct PublisherSettings: Codable {
     var name: String?
     var audioTrack: Bool?
     var videoTrack: Bool?
     var audioBitrate: Int?
+    var cameraResolution: OTCameraCaptureResolution?
+    var cameraFrameRate: OTCameraCaptureFrameRate?
 }
