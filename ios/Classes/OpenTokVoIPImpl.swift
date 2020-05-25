@@ -318,11 +318,14 @@ extension OpenTokVoIPImpl: OTSessionDelegate {
         subscribe(toStream: stream)
 
         delegate?.didCreateStream()
+        if (stream.hasVideo) {
+            delegate?.didReceiveVideo()
+        }
     }
 
     public func session(_: OTSession, streamDestroyed stream: OTStream) {
         os_log("[OTSubscriberDelegate] %s", type: .info, #function)
-
+        unsubscribe()
         delegate?.didDropStream()
     }
 
