@@ -66,12 +66,6 @@ class OpenTokVoIPImpl: NSObject {
     fileprivate var subscriber: OTSubscriber!
     fileprivate var videoReceived: Bool = false
 
-    private var publishVideo: Bool = false {
-        didSet {
-            publisher?.publishVideo = publishVideo
-        }
-    }
-
     deinit {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
             os_log("[DEINIT] OpenTokVoIPImpl", type: .info)
@@ -174,8 +168,8 @@ extension OpenTokVoIPImpl: VoIPProvider {
     }
 
     var isAudioOnly: Bool {
-        get { return !publishVideo }
-        set { publishVideo = !newValue }
+        get { return !publisher.publishVideo }
+        set { publisher.publishVideo = !newValue }
     }
 }
 
