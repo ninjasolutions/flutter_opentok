@@ -61,3 +61,4 @@ DerivedData
 **/ios/Flutter/flutter_export_environment.sh
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
+example/.flutter-plugins-dependencies

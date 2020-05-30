@@ -1,5 +1,3 @@
-var API_KEY = "API_KEY";
-var SESSION_ID =
-    "SESSION_ID";
-var TOKEN =
-    "TOKEN";
+var API_KEY = "";
+var SESSION_ID = "";
+var TOKEN = "";

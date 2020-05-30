@@ -15,6 +15,7 @@ protocol VoIPProviderDelegate {
     func didDisconnect()
     func didReceiveVideo()
     func didCreateStream()
+    func didDropStream()
     func didCreatePublisherStream()
 }
 
@@ -36,6 +37,8 @@ public protocol VoIPProvider {
 
     func enablePublisherVideo()
     func disablePublisherVideo()
+    
+    func switchCamera()
 }
 
 class OpenTokVoIPImpl: NSObject {
@@ -44,6 +47,10 @@ class OpenTokVoIPImpl: NSObject {
 
     var subscriberView: UIView? {
         return subscriber?.view
+    }
+    
+    var publisherView: UIView? {
+        return publisher?.view
     }
 
     init(delegate: VoIPProviderDelegate?, publisherSettings: PublisherSettings?) {
@@ -58,12 +65,6 @@ class OpenTokVoIPImpl: NSObject {
     fileprivate var publisher: OTPublisher!
     fileprivate var subscriber: OTSubscriber!
     fileprivate var videoReceived: Bool = false
-
-    private var publishVideo: Bool = false {
-        didSet {
-            publisher?.publishVideo = publishVideo
-        }
-    }
 
     deinit {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
@@ -149,6 +150,17 @@ extension OpenTokVoIPImpl: VoIPProvider {
             publisher.publishVideo = false
         }
     }
+    
+    func switchCamera() {
+        if SwiftFlutterOpentokPlugin.loggingEnabled {
+            os_log("[OpenTokVoIPImpl] Switch camera", type: .info)
+        }
+        if publisher.cameraPosition == .front {
+            publisher.cameraPosition = .back
+        } else {
+            publisher.cameraPosition = .front
+        }
+    }
 
     var isMuted: Bool {
         get { return !(publisher?.publishAudio ?? false) }
@@ -156,8 +168,8 @@ extension OpenTokVoIPImpl: VoIPProvider {
     }
 
     var isAudioOnly: Bool {
-        get { return !publishVideo }
-        set { publishVideo = !newValue }
+        get { return !publisher.publishVideo }
+        set { publisher.publishVideo = !newValue }
     }
 }
 
@@ -180,6 +192,7 @@ private extension OpenTokVoIPImpl {
     }
 
     func disconnectSession() {
+        unpublish()
         if session != nil {
             session.disconnect(nil)
         }
@@ -195,8 +208,29 @@ private extension OpenTokVoIPImpl {
         settings.name = publisherSettings?.name ?? UIDevice.current.name
         settings.videoTrack = publisherSettings?.videoTrack ?? true
         settings.audioTrack = publisherSettings?.audioTrack ?? true
-        settings.cameraResolution = .high
-        settings.cameraFrameRate = .rate30FPS
+        switch publisherSettings?.cameraResolution {
+            case .none:
+                settings.cameraResolution = .high
+            case .some(.OTCameraCaptureResolutionLow):
+                settings.cameraResolution = .low
+            case .some(.OTCameraCaptureResolutionMedium):
+                settings.cameraResolution = .medium
+            case .some(.OTCameraCaptureResolutionHigh):
+                settings.cameraResolution = .high
+        }
+        switch publisherSettings?.cameraFrameRate {
+            case .none:
+                settings.cameraFrameRate = .rate30FPS
+            case .some(.OTCameraCaptureFrameRate1FPS):
+                settings.cameraFrameRate = .rate1FPS
+            case .some(.OTCameraCaptureFrameRate30FPS):
+                settings.cameraFrameRate = .rate30FPS
+            case .some(.OTCameraCaptureFrameRate15FPS):
+                settings.cameraFrameRate = .rate15FPS
+            case .some(.OTCameraCaptureFrameRate7FPS):
+                settings.cameraFrameRate = .rate7FPS
+        }
+        
 
         if SwiftFlutterOpentokPlugin.loggingEnabled {
             os_log("[OpenTokVoIPImpl] Settings: %@", type: .info, settings.description)
@@ -204,6 +238,7 @@ private extension OpenTokVoIPImpl {
 
         publisher = OTPublisher(delegate: self, settings: settings)
         publisher.cameraPosition = .front
+        publisher.publishVideo = false
 
         // Publish publisher to session
         var error: OTError?
@@ -312,10 +347,15 @@ extension OpenTokVoIPImpl: OTSessionDelegate {
         subscribe(toStream: stream)
 
         delegate?.didCreateStream()
+        if (stream.hasVideo) {
+            delegate?.didReceiveVideo()
+        }
     }
 
     public func session(_: OTSession, streamDestroyed stream: OTStream) {
         os_log("[OTSubscriberDelegate] %s", type: .info, #function)
+        unsubscribe()
+        delegate?.didDropStream()
     }
 
     public func session(_: OTSession, connectionCreated connection: OTConnection) {
@@ -374,6 +414,7 @@ extension OpenTokVoIPImpl: OTSubscriberDelegate {
         }
 
         unsubscribe()
+        delegate?.didDropStream()
     }
 
     public func subscriber(_: OTSubscriberKit, didFailWithError error: OTError) {

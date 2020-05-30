@@ -22,6 +22,9 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
 
     var screenHeight: Int?
     var screenWidth: Int?
+    
+    var publisherHeight: Int = 250
+    var publisherWidth: Int = 180
 
     var enablePublisherVideo: Bool?
 
@@ -41,14 +44,22 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
         channel = FlutterMethodChannel(name: channelName, binaryMessenger: registrar.messenger())
 
         openTokView = UIView(frame: self.frame)
-        openTokView.isOpaque = false
-        openTokView.backgroundColor = UIColor.black
-
+        openTokView.isOpaque = true
+        
         if let arguments = args as? [String: Any],
             let width = arguments["width"] as? Int,
             let height = arguments["height"] as? Int {
             screenHeight = height
             screenWidth = width
+            
+            
+        }
+        
+        if let arguments = args as? [String: Any],
+            let pubWidth = arguments["publisherWidth"] as? Int,
+            let pubHeight = arguments["publisherHeight"] as? Int {
+            publisherWidth = pubWidth
+            publisherHeight = pubHeight
         }
 
         // Decode publisher settings.
@@ -136,10 +147,16 @@ class FlutterOpenTokViewController: NSObject, FlutterPlatformView {
         }
     }
 
-    /// Convenience getter for current video view based on provider implementation
-    var videoView: UIView? {
+    var subscriperView: UIView? {
         if let openTokProvider = self.provider as? OpenTokVoIPImpl {
             return openTokProvider.subscriberView
+        }
+        return nil
+    }
+    
+    var publisherView: UIView? {
+        if let openTokProvider = self.provider as? OpenTokVoIPImpl {
+            return openTokProvider.publisherView
         }
         return nil
     }
@@ -185,9 +202,11 @@ extension FlutterOpenTokViewController: FlutterViewControllerImpl {
             result(nil)
         } else if call.method == "enablePublisherVideo" {
             provider?.enablePublisherVideo()
+            refreshViews()
             result(nil)
         } else if call.method == "disablePublisherVideo" {
             provider?.disablePublisherVideo()
+            refreshViews()
             result(nil)
         } else if call.method == "unmutePublisherAudio" {
             provider?.unmutePublisherAudio()
@@ -202,12 +221,18 @@ extension FlutterOpenTokViewController: FlutterViewControllerImpl {
             provider?.unmuteSubscriberAudio()
             result(nil)
         } else if call.method == "switchAudioToSpeaker" {
-            switchAudioSessionToSpeaker()
+            switchedToSpeaker = true
+            configureAudioSession()
             result(nil)
         } else if call.method == "switchAudioToReceiver" {
-            switchAudioSessionToReceiver()
+            switchedToSpeaker = false
+            configureAudioSession()
             result(nil)
-        } else if call.method == "getSdkVersion" {
+        } else if call.method == "switchCamera" {
+            provider.switchCamera()
+            result(nil)
+        }
+        else if call.method == "getSdkVersion" {
             result(OPENTOK_LIBRARY_VERSION)
         } else {
             result(FlutterMethodNotImplemented)
@@ -243,26 +268,21 @@ extension FlutterOpenTokViewController: VoIPProviderDelegate {
         channelInvokeMethod("onCreateStream", arguments: nil)
     }
 
+    func didDropStream() {
+        channelInvokeMethod("onDroppedStream", arguments: nil)
+    }
+
     func didCreatePublisherStream() {
         channelInvokeMethod("onCreatePublisherStream", arguments: nil)
     }
 
     func willConnect() {
-        configureAudioSession()
-
         channelInvokeMethod("onWillConnect", arguments: nil)
-
-        if let enablePublisherVideo = self.enablePublisherVideo {
-            if enablePublisherVideo == true {
-                let videoPermission = AVCaptureDevice.authorizationStatus(for: .video)
-                let videoEnabled = (videoPermission == .authorized)
-
-                provider?.isAudioOnly = !videoEnabled
-            }
-        }
     }
 
     func didConnect() {
+        configureAudioSession()
+        refreshViews()
         channelInvokeMethod("onSessionConnect", arguments: nil)
     }
 
@@ -276,12 +296,18 @@ extension FlutterOpenTokViewController: VoIPProviderDelegate {
         if SwiftFlutterOpentokPlugin.loggingEnabled {
             print("[FlutterOpenTokViewController] Receive video")
         }
-
+        refreshViews()
         channelInvokeMethod("onReceiveVideo", arguments: nil)
-
-        if let view = self.videoView {
-            channelInvokeMethod("[onReceiveVideo", arguments: nil)
-
+    }
+    
+    func refreshViews() {
+        if (openTokView.subviews.count > 0) {
+            for subView in openTokView.subviews as [UIView] {
+                subView.removeFromSuperview()
+            }
+        }
+        
+        if let view = self.subscriperView {
             openTokView.addSubview(view)
 
             view.backgroundColor = .black
@@ -292,41 +318,59 @@ extension FlutterOpenTokViewController: VoIPProviderDelegate {
                 make.right.equalTo(openTokView)
             }
         }
+        
+        if provider.isAudioOnly == false {
+            if let view = self.publisherView {
+                openTokView.addSubview(view)
+                
+                view.backgroundColor = .black
+                view.frame = CGRect(x: 0, y: 0, width: publisherWidth, height: publisherHeight)
+                view.isUserInteractionEnabled = true
+                let pan = UIPanGestureRecognizer(target: self, action: #selector(panView))
+                view.addGestureRecognizer(pan)
+            }
+        }
+    }
+    
+    @objc func panView(sender: UIPanGestureRecognizer) {
+        let translation = sender.translation(in: self.openTokView)
+
+        if let viewToDrag = sender.view {
+            let halfWidth = viewToDrag.frame.width / 2
+            let halfHeight = viewToDrag.frame.height / 2
+            
+            var x = viewToDrag.center.x + translation.x
+            if (x < halfWidth) {
+              x = halfWidth
+            }
+            if (x > self.openTokView.frame.width - halfWidth ) {
+              x = self.openTokView.frame.width - halfWidth
+            }
+            
+            var y = viewToDrag.center.y + translation.y
+            if (y < halfHeight) {
+              y = halfHeight
+            }
+            if (y > self.openTokView.frame.height - halfHeight ) {
+              y = self.openTokView.frame.height - halfHeight
+            }
+            viewToDrag.center = CGPoint(x: x, y: y)
+            sender.setTranslation(CGPoint(x: 0, y: 0), in: viewToDrag)
+        }
     }
 }
 
-extension FlutterOpenTokViewController {
-    func switchAudioSessionToSpeaker() {
-        if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print(#function)
-        }
+enum OTCameraCaptureResolution: String, Codable {
+    case OTCameraCaptureResolutionLow,
+         OTCameraCaptureResolutionMedium,
+         OTCameraCaptureResolutionHigh
+}
 
-        do {
-            try AVAudioSession.sharedInstance().setMode(AVAudioSession.Mode.videoChat)
-            try AVAudioSession.sharedInstance().overrideOutputAudioPort(AVAudioSession.PortOverride.speaker)
-            switchedToSpeaker = true
-        } catch {
-            if SwiftFlutterOpentokPlugin.loggingEnabled {
-                print("Session overrideOutputAudioPort error: \(error)")
-            }
-        }
-    }
-
-    func switchAudioSessionToReceiver() {
-        if SwiftFlutterOpentokPlugin.loggingEnabled {
-            print(#function)
-        }
-
-        do {
-            try AVAudioSession.sharedInstance().setMode(AVAudioSession.Mode.voiceChat)
-            try AVAudioSession.sharedInstance().overrideOutputAudioPort(AVAudioSession.PortOverride.none)
-            switchedToSpeaker = false
-        } catch {
-            if SwiftFlutterOpentokPlugin.loggingEnabled {
-                print("Session overrideOutputAudioPort error: \(error)")
-            }
-        }
-    }
+enum OTCameraCaptureFrameRate: String, Codable {
+  case OTCameraCaptureFrameRate30FPS,
+    OTCameraCaptureFrameRate15FPS,
+    OTCameraCaptureFrameRate7FPS,
+    OTCameraCaptureFrameRate1FPS
 }
 
 struct PublisherSettings: Codable {
@@ -334,4 +378,6 @@ struct PublisherSettings: Codable {
     var audioTrack: Bool?
     var videoTrack: Bool?
     var audioBitrate: Int?
+    var cameraResolution: OTCameraCaptureResolution?
+    var cameraFrameRate: OTCameraCaptureFrameRate?
 }

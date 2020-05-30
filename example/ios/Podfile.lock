@@ -12,7 +12,7 @@ DEPENDENCIES:
   - flutter_opentok (from `.symlinks/plugins/flutter_opentok/ios`)
 
 SPEC REPOS:
-  https://github.com/CocoaPods/Specs.git:
+  trunk:
     - OpenTok
     - SnapKit
 
@@ -30,4 +30,4 @@ SPEC CHECKSUMS:
 
 PODFILE CHECKSUM: c47916e0ea013ef4e06d5dbe697ddc982b15f926
 
-COCOAPODS: 1.8.4
+COCOAPODS: 1.9.1

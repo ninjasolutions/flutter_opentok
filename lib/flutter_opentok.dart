@@ -42,8 +42,12 @@ class OTFlutter {
   /// Occurs when subscriber stream has been created.
   static VoidCallback onCreateStream;
 
+  /// Occurs when subscriber stream has been dropped.
+  static VoidCallback onDroppedStream;
+
   /// Occurs when publisher stream has been created.
   static VoidCallback onCreatePublisherStream;
+
 
   // Core Methods
   /// Creates an OpenTok instance.
@@ -139,6 +143,16 @@ class OTFlutter {
     await channel.invokeMethod('disableVideo');
   }
 
+  /// Switch the audio output to use speakers
+  Future<void> switchAudioToSpeaker() async {
+    await channel.invokeMethod("switchAudioToSpeaker");
+  }
+
+  /// Switch the audio output to use phone
+  Future<void> switchAudioToPhone() async {
+    await channel.invokeMethod("switchAudioToReceiver");
+  }
+
   /// Creates the video renderer Widget.
   ///
   static Widget createNativeView(
@@ -168,6 +182,18 @@ class OTFlutter {
 
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       return UiKitView(
+        key: new ObjectKey(uid.toString()),
+        viewType: 'OpenTokRendererView',
+        onPlatformViewCreated: (viewId) {
+          if (created != null) {
+            created(viewId);
+          }
+        },
+        creationParams: creationParams,
+        creationParamsCodec: StandardMessageCodec(),
+      );
+    } else if (defaultTargetPlatform == TargetPlatform.android) {
+      return AndroidView(
         key: new ObjectKey(uid.toString()),
         viewType: 'OpenTokRendererView',
         onPlatformViewCreated: (viewId) {
@@ -239,6 +265,12 @@ class OTFlutter {
       case 'onWillConnect':
         if (onWillConnect != null) {
           onWillConnect();
+        }
+        break;
+
+      case 'onDroppedStream':
+        if (onDroppedStream != null) {
+          onDroppedStream();
         }
         break;
 
